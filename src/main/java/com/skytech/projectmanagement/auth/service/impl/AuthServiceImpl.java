@@ -6,12 +6,10 @@ import com.skytech.projectmanagement.auth.dto.LoginRequest;
 import com.skytech.projectmanagement.auth.dto.LoginResponse;
 import com.skytech.projectmanagement.auth.dto.RefreshTokenRequest;
 import com.skytech.projectmanagement.auth.dto.RefreshTokenResponse;
-import com.skytech.projectmanagement.auth.dto.ResetPasswordRequest;
 import com.skytech.projectmanagement.auth.dto.UserLoginResponse;
 import com.skytech.projectmanagement.auth.security.JwtTokenProvider;
 import com.skytech.projectmanagement.auth.service.AuthService;
 import com.skytech.projectmanagement.common.mail.EmailService;
-import com.skytech.projectmanagement.user.entity.PasswordResetToken;
 import com.skytech.projectmanagement.user.entity.User;
 import com.skytech.projectmanagement.user.entity.UserRefreshToken;
 import com.skytech.projectmanagement.user.service.PasswordResetTokenService;
@@ -111,27 +109,15 @@ public class AuthServiceImpl implements AuthService {
         try {
             User user = userService.findUserByEmail(email);
 
-            String rawToken = passwordResetTokenService.createResetToken(user);
+            String rawTempPassword = passwordResetTokenService.createResetToken(user);
 
-            emailService.sendPasswordResetEmail(user.getEmail(), rawToken);
+            emailService.sendPasswordResetEmail(user.getEmail(), rawTempPassword);
 
         } catch (Exception e) {
             log.warn(
                     "Yêu cầu reset password cho email '{}' thất bại hoặc email không tồn tại. Lỗi: {}",
                     email, e.getMessage());
         }
-    }
-
-    @Override
-    public void resetPassword(ResetPasswordRequest request) {
-        PasswordResetToken tokenEntity =
-                passwordResetTokenService.validateResetToken(request.token());
-
-        Integer userId = tokenEntity.getUserId();
-
-        userService.updatePassword(userId, request.newPassword());
-
-        passwordResetTokenService.deleteToken(tokenEntity);
     }
 
 }

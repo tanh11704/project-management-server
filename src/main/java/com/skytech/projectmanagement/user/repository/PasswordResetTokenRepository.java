@@ -5,7 +5,8 @@ import com.skytech.projectmanagement.user.entity.PasswordResetToken;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface PasswordResetTokenRepository extends JpaRepository<PasswordResetToken, Integer> {
+
     void deleteByUserId(Integer userId);
 
-    Optional<PasswordResetToken> findByToken(String token);
+    Optional<PasswordResetToken> findByUserId(Integer userId);
 }

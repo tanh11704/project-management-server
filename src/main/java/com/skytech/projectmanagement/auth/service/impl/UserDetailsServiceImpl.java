@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 import com.skytech.projectmanagement.auth.repository.PermissionRepository;
+import com.skytech.projectmanagement.auth.security.CustomUserDetails;
 import com.skytech.projectmanagement.common.exception.ResourceNotFoundException;
 import com.skytech.projectmanagement.user.entity.User;
 import com.skytech.projectmanagement.user.service.UserService;
@@ -45,8 +46,7 @@ public class UserDetailsServiceImpl implements UserDetailsService {
         List<GrantedAuthority> authorities =
                 permissions.stream().map(SimpleGrantedAuthority::new).collect(Collectors.toList());
 
-        return new org.springframework.security.core.userdetails.User(user.getEmail(),
-                user.getHashPassword(), authorities);
+        return new CustomUserDetails(user, authorities);
     }
 
 }

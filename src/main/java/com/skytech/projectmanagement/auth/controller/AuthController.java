@@ -6,7 +6,6 @@ import com.skytech.projectmanagement.auth.dto.LoginResponse;
 import com.skytech.projectmanagement.auth.dto.LogoutRequest;
 import com.skytech.projectmanagement.auth.dto.RefreshTokenRequest;
 import com.skytech.projectmanagement.auth.dto.RefreshTokenResponse;
-import com.skytech.projectmanagement.auth.dto.ResetPasswordRequest;
 import com.skytech.projectmanagement.auth.service.AuthService;
 import com.skytech.projectmanagement.common.dto.SuccessResponse;
 import org.springframework.http.ResponseEntity;
@@ -66,13 +65,4 @@ public class AuthController {
         return ResponseEntity.ok(response);
     }
 
-    @PostMapping("/reset-password")
-    public ResponseEntity<SuccessResponse<Object>> resetPassword(
-            @Valid @RequestBody ResetPasswordRequest request) {
-        authService.resetPassword(request);
-
-        SuccessResponse<Object> response = SuccessResponse.of(null, "Đặt lại mật khẩu thành công.");
-
-        return ResponseEntity.ok(response);
-    }
 }

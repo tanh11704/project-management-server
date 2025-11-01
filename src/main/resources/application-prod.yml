@@ -2,9 +2,9 @@ spring:
   application:
     name: projectmanagement
   datasource:
-    url: jdbc:postgresql://localhost:5432/project_management
-    username: postgres
-    password: 12345
+    url: jdbc:postgresql://${PGHOST}:${PGPORT}/${PGDATABASE}
+    username: ${PGUSER}
+    password: ${PGPASSWORD}
   jpa:
     hibernate:
       ddl-auto: update
@@ -31,15 +31,19 @@ spring:
             enable: true
             required: true
 
-cloudinary:
-  url: cloudinary://374243676686272:uG_J9b9OE4_nRTJTCe7ZkPyR7gQ@dobtgdvzk
-
 jwt:
   secret-key: daf66e01593f61a15b857cf433aae03a005812b31234e149036bcc8dee755dbb
   expiration-ms: 900000 # 15 minutes
   refresh-expiration-ms: 604800000 # 7 days
 
+cloudinary:
+  #   url: cloudinary://374243676686272:uG_J9b9OE4_nRTJTCe7ZkPyR7gQ@dobtgdvzk
+  url: ${CLOUDINARYURL}
+
+server:
+  port: 8080
+
 seeder:
   admin:
-    email: admin@gmail.com
-    password: 123456
+    email: ${ADMINEMAIL}
+    password: ${ADMINPASSWORD}

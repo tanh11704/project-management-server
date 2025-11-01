@@ -24,11 +24,11 @@ public class PasswordResetToken {
             allocationSize = 1)
     private Integer id;
 
-    @Column(name = "user_id", nullable = false)
+    @Column(name = "user_id", nullable = false, unique = true)
     private Integer userId;
 
-    @Column(name = "token", nullable = false, unique = true)
-    private String token;
+    @Column(name = "hash_token", columnDefinition = "TEXT")
+    private String hashToken;
 
     @Column(name = "expires_at", nullable = false)
     private Instant expiresAt;

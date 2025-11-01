@@ -4,7 +4,6 @@ import com.skytech.projectmanagement.auth.dto.LoginRequest;
 import com.skytech.projectmanagement.auth.dto.LoginResponse;
 import com.skytech.projectmanagement.auth.dto.RefreshTokenRequest;
 import com.skytech.projectmanagement.auth.dto.RefreshTokenResponse;
-import com.skytech.projectmanagement.auth.dto.ResetPasswordRequest;
 
 public interface AuthService {
 
@@ -16,5 +15,4 @@ public interface AuthService {
 
     void handleForgotPassword(String email);
 
-    void resetPassword(ResetPasswordRequest request);
 }

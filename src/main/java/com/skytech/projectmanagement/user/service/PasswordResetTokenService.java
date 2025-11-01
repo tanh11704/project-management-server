@@ -4,9 +4,8 @@ import com.skytech.projectmanagement.user.entity.PasswordResetToken;
 import com.skytech.projectmanagement.user.entity.User;
 
 public interface PasswordResetTokenService {
-    String createResetToken(User user);
 
-    PasswordResetToken validateResetToken(String token);
+    String createResetToken(User user);
 
     void deleteToken(PasswordResetToken token);
 }
