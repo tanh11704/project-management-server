@@ -87,7 +87,7 @@ public class TaskServiceImpl implements TaskService {
         // 2. Status changed from DONE/CLOSED back to active status
         boolean dueDateChanged = (originalDueDate == null && updated.getDueDate() != null)
                 || (originalDueDate != null && updated.getDueDate() != null
-                && !originalDueDate.equals(updated.getDueDate()));
+                        && !originalDueDate.equals(updated.getDueDate()));
 
         boolean statusChangedToActive =
                 (originalStatus == TaskStatus.DONE || originalStatus == TaskStatus.CLOSED)
@@ -111,7 +111,7 @@ public class TaskServiceImpl implements TaskService {
 
     @Override
     public List<TaskResponseDTO> getTasks(Integer projectId, Integer assigneeId, String status,
-                                          String priority) {
+            String priority) {
         var spec = filter(projectId != null ? projectId.intValue() : null,
                 assigneeId != null ? assigneeId.intValue() : null, status, priority);
         return taskRepository.findAll(spec).stream().map(taskMapper::toDto).toList();
@@ -119,7 +119,7 @@ public class TaskServiceImpl implements TaskService {
 
 
     private Specification<Tasks> filter(Integer projectId, Integer assigneeId, String status,
-                                        String priority) {
+            String priority) {
         return (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
 
