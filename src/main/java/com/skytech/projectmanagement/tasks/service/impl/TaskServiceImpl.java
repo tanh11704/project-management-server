@@ -118,6 +118,11 @@ public class TaskServiceImpl implements TaskService {
     }
 
 
+<<<<<<< HEAD
+=======
+
+
+>>>>>>> 4496138 (implement CRUD comment)
     private Specification<Tasks> filter(Integer projectId, Integer assigneeId, String status,
             String priority) {
         return (root, query, cb) -> {

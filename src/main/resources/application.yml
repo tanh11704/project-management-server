@@ -37,8 +37,6 @@ cloudinary:
 jwt:
   secret-key: daf66e01593f61a15b857cf433aae03a005812b31234e149036bcc8dee755dbb
   expiration-ms: 900000 # 15 minutes
-  refresh-expiration-ms: 86400000 # 1 day
-
 seeder:
   admin:
     email: admin@gmail.com
@@ -73,3 +71,4 @@ springdoc:
   # Cấu hình mặc định cho tất cả các paths
   default-consumes-media-type: application/json
   default-produces-media-type: application/json
+    password: 123456
