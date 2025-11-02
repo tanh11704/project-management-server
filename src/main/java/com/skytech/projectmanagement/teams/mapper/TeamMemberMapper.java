@@ -8,6 +8,7 @@ import org.mapstruct.Mapping;
 
 @Mapper(componentModel = "spring")
 public interface TeamMemberMapper {
+
     @Mapping(source = "teamId", target = "teamId")
     @Mapping(source = "userId", target = "userId")
     TeamMemberDTO toDto(TeamMember teamMember);

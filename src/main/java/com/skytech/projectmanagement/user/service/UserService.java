@@ -5,6 +5,8 @@ import java.util.Set;
 import com.skytech.projectmanagement.common.dto.PaginatedResponse;
 import com.skytech.projectmanagement.user.dto.ChangePasswordRequest;
 import com.skytech.projectmanagement.user.dto.CreateUserRequest;
+import com.skytech.projectmanagement.user.dto.ResetPasswordsRequest;
+import com.skytech.projectmanagement.user.dto.ResetPasswordsResponse;
 import com.skytech.projectmanagement.user.dto.UpdateUserRequest;
 import com.skytech.projectmanagement.user.dto.UserResponse;
 import com.skytech.projectmanagement.user.entity.User;
@@ -40,4 +42,6 @@ public interface UserService {
     void updatePassword(Integer userId, String newPassword);
 
     void changePassword(String userEmail, ChangePasswordRequest request);
+
+    ResetPasswordsResponse resetPasswordsForUsers(ResetPasswordsRequest request);
 }

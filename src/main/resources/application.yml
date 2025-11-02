@@ -37,7 +37,7 @@ cloudinary:
 jwt:
   secret-key: daf66e01593f61a15b857cf433aae03a005812b31234e149036bcc8dee755dbb
   expiration-ms: 900000 # 15 minutes
-  refresh-expiration-ms: 604800000 # 7 days
+  refresh-expiration-ms: 86400000 # 7 days
 
 seeder:
   admin:

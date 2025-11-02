@@ -13,10 +13,12 @@ import com.skytech.projectmanagement.common.exception.FileStorageException;
 import com.skytech.projectmanagement.common.exception.InvalidOldPasswordException;
 import com.skytech.projectmanagement.common.exception.ResourceNotFoundException;
 import com.skytech.projectmanagement.common.exception.UserNotFoundInRequestException;
-import com.skytech.projectmanagement.filestorage.config.CloudinaryConfig;
+import com.skytech.projectmanagement.common.mail.EmailService;
 import com.skytech.projectmanagement.filestorage.service.FileStorageService;
 import com.skytech.projectmanagement.user.dto.ChangePasswordRequest;
 import com.skytech.projectmanagement.user.dto.CreateUserRequest;
+import com.skytech.projectmanagement.user.dto.ResetPasswordsRequest;
+import com.skytech.projectmanagement.user.dto.ResetPasswordsResponse;
 import com.skytech.projectmanagement.user.dto.UpdateUserRequest;
 import com.skytech.projectmanagement.user.dto.UserResponse;
 import com.skytech.projectmanagement.user.entity.User;
@@ -44,7 +46,7 @@ public class UserServiceImpl implements UserService {
     private final UserRefreshTokenRepository userRefreshTokenRepository;
     private final PasswordEncoder passwordEncoder;
     private final FileStorageService fileStorageService;
-    private final CloudinaryConfig cloudinaryConfig;
+    private final EmailService emailService;
 
     @Override
     public User findUserByEmail(String email) {
@@ -253,6 +255,84 @@ public class UserServiceImpl implements UserService {
     @Transactional(readOnly = true)
     public boolean existsById(Integer userId) {
         return userRepository.existsById(userId);
+    }
+
+    @Override
+    @Transactional
+    public ResetPasswordsResponse resetPasswordsForUsers(ResetPasswordsRequest request) {
+        List<Integer> resetUserIds = new java.util.ArrayList<>();
+        List<Integer> failedUserIds = new java.util.ArrayList<>();
+
+        for (Integer userId : request.getUserIds()) {
+            try {
+                User user = userRepository.findById(userId)
+                        .orElseThrow(() -> new ResourceNotFoundException(
+                                "Không tìm thấy người dùng với ID: " + userId));
+
+                // Generate random password (12 characters: uppercase, lowercase, numbers)
+                String newPassword = generateRandomPassword();
+                String encodedPassword = passwordEncoder.encode(newPassword);
+
+                // Update password
+                user.setHashPassword(encodedPassword);
+                userRepository.save(user);
+
+                // Invalidate all refresh tokens for this user
+                userRefreshTokenRepository.deleteByUserId(userId);
+
+                // Send email with new password
+                try {
+                    emailService.sendNewPasswordEmail(user.getEmail(), user.getFullName(),
+                            newPassword);
+                    log.info("Đã gửi email mật khẩu mới tới user ID: {} ({})", userId,
+                            user.getEmail());
+                } catch (Exception emailException) {
+                    log.error("Đã reset mật khẩu cho user ID {} nhưng không thể gửi email: {}",
+                            userId, emailException.getMessage());
+                    // Still count as success since password was reset
+                }
+
+                resetUserIds.add(userId);
+                log.info("Đã reset mật khẩu cho user ID: {}", userId);
+            } catch (Exception e) {
+                failedUserIds.add(userId);
+                log.error("Không thể reset mật khẩu cho user ID {}: {}", userId, e.getMessage());
+            }
+        }
+
+        return new ResetPasswordsResponse(resetUserIds, failedUserIds, resetUserIds.size(),
+                failedUserIds.size());
+    }
+
+    private String generateRandomPassword() {
+        String uppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+        String lowercase = "abcdefghijklmnopqrstuvwxyz";
+        String numbers = "0123456789";
+        String allChars = uppercase + lowercase + numbers;
+
+        java.util.Random random = new java.util.Random();
+        StringBuilder password = new StringBuilder(12);
+
+        // Ensure at least one character from each set
+        password.append(uppercase.charAt(random.nextInt(uppercase.length())));
+        password.append(lowercase.charAt(random.nextInt(lowercase.length())));
+        password.append(numbers.charAt(random.nextInt(numbers.length())));
+
+        // Fill the rest randomly
+        for (int i = 3; i < 12; i++) {
+            password.append(allChars.charAt(random.nextInt(allChars.length())));
+        }
+
+        // Shuffle the password
+        char[] passwordArray = password.toString().toCharArray();
+        for (int i = passwordArray.length - 1; i > 0; i--) {
+            int j = random.nextInt(i + 1);
+            char temp = passwordArray[i];
+            passwordArray[i] = passwordArray[j];
+            passwordArray[j] = temp;
+        }
+
+        return new String(passwordArray);
     }
 
     private UserResponse createResponseWithAvatarUrl(User user) {

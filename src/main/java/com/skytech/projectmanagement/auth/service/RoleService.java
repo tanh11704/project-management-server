@@ -5,6 +5,7 @@ import com.skytech.projectmanagement.auth.dto.CreateRoleRequest;
 import com.skytech.projectmanagement.auth.dto.PermissionResponse;
 import com.skytech.projectmanagement.auth.dto.RoleResponse;
 import com.skytech.projectmanagement.auth.dto.SyncRolePermissionsRequest;
+import com.skytech.projectmanagement.auth.dto.SyncUserPermissionsRequest;
 import com.skytech.projectmanagement.auth.dto.UpdateUserRolesRequest;
 
 public interface RoleService {
@@ -21,4 +22,9 @@ public interface RoleService {
     List<RoleResponse> syncRolesForUser(Integer userId, UpdateUserRolesRequest request);
 
     RoleResponse createRole(CreateRoleRequest request);
+
+    List<PermissionResponse> syncPermissionsForUser(Integer userId,
+            SyncUserPermissionsRequest request);
+
+    List<PermissionResponse> getPermissionsByUserId(Integer userId);
 }

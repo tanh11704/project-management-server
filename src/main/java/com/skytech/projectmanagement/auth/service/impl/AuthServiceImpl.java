@@ -1,14 +1,17 @@
 package com.skytech.projectmanagement.auth.service.impl;
 
 import java.util.List;
-import java.util.stream.Collectors;
+import java.util.Set;
 import com.skytech.projectmanagement.auth.dto.LoginRequest;
 import com.skytech.projectmanagement.auth.dto.LoginResponse;
+import com.skytech.projectmanagement.auth.dto.PermissionTreeNode;
 import com.skytech.projectmanagement.auth.dto.RefreshTokenRequest;
 import com.skytech.projectmanagement.auth.dto.RefreshTokenResponse;
 import com.skytech.projectmanagement.auth.dto.UserLoginResponse;
+import com.skytech.projectmanagement.auth.repository.PermissionRepository;
 import com.skytech.projectmanagement.auth.security.JwtTokenProvider;
 import com.skytech.projectmanagement.auth.service.AuthService;
+import com.skytech.projectmanagement.auth.service.PermissionService;
 import com.skytech.projectmanagement.common.mail.EmailService;
 import com.skytech.projectmanagement.user.entity.User;
 import com.skytech.projectmanagement.user.entity.UserRefreshToken;
@@ -19,7 +22,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -35,12 +37,15 @@ public class AuthServiceImpl implements AuthService {
     private final RefreshTokenService refreshTokenService;
     private final PasswordResetTokenService passwordResetTokenService;
     private final EmailService emailService;
+    private final PermissionRepository permissionRepository;
+    private final PermissionService permissionService;
     private final long jwtExpirationMs;
 
     public AuthServiceImpl(AuthenticationManager authenticationManager,
             JwtTokenProvider jwtTokenProvider, UserService userService,
             RefreshTokenService refreshTokenService,
             PasswordResetTokenService passwordResetTokenService, EmailService emailService,
+            PermissionRepository permissionRepository, PermissionService permissionService,
             @Value("${jwt.expiration-ms}") long jwtExpirationMs) {
         this.authenticationManager = authenticationManager;
         this.jwtTokenProvider = jwtTokenProvider;
@@ -48,6 +53,8 @@ public class AuthServiceImpl implements AuthService {
         this.refreshTokenService = refreshTokenService;
         this.passwordResetTokenService = passwordResetTokenService;
         this.emailService = emailService;
+        this.permissionRepository = permissionRepository;
+        this.permissionService = permissionService;
         this.jwtExpirationMs = jwtExpirationMs;
     }
 
@@ -69,11 +76,20 @@ public class AuthServiceImpl implements AuthService {
                 jwtTokenProvider.getExpirationDateFromToken(refreshToken).toInstant(),
                 loginRequest.deviceInfo());
 
-        List<String> permissions = authentication.getAuthorities().stream()
-                .map(GrantedAuthority::getAuthority).collect(Collectors.toList());
+        // Build permission tree
+        Set<String> userPermissionNames;
+        if (Boolean.TRUE.equals(user.getIsAdmin())) {
+            userPermissionNames = permissionRepository.findAllPermissionNames();
+        } else {
+            // Get only leaf permissions stored in database
+            userPermissionNames = permissionRepository.findLeafPermissionsByUserId(user.getId());
+        }
+
+        List<PermissionTreeNode> permissionTree =
+                permissionService.buildPermissionTree(userPermissionNames);
 
         UserLoginResponse userResponse = new UserLoginResponse(user.getId(), user.getFullName(),
-                user.getEmail(), user.getAvatar(), permissions);
+                user.getEmail(), user.getAvatar(), permissionTree);
 
         return new LoginResponse(userResponse, accessToken, refreshToken, jwtExpirationMs / 1000);
     }

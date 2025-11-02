@@ -38,12 +38,12 @@ public class SecurityConfig {
         }).exceptionHandling(exception -> exception.authenticationEntryPoint(unauthorizedHandler))
                 .sessionManagement(
                         session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(
-                        authorize -> authorize.requestMatchers("/auth-service/v1/login").permitAll()
-                                .requestMatchers("/auth-service/v1/logout").permitAll()
-                                .requestMatchers("/auth-service/v1/refresh").permitAll()
-                                .requestMatchers("/auth-service/v1/forgot-password").permitAll()
-                                .anyRequest().authenticated());
+                .authorizeHttpRequests(authorize -> authorize
+                        .requestMatchers("/auth-service/v1/login").permitAll()
+                        .requestMatchers("/auth-service/v1/logout").permitAll()
+                        .requestMatchers("/auth-service/v1/refresh").permitAll()
+                        .requestMatchers("/auth-service/v1/forgot-password").permitAll()
+                        .requestMatchers("/ws/**").permitAll().anyRequest().authenticated());
 
         http.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
