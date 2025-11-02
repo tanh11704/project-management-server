@@ -37,19 +37,16 @@ public class BugController {
     private final UserService userService;
 
     @PostMapping
-    @PreAuthorize("hasAnyAuthority('PROJECT_MANAGE_ANY', 'PROJECT_MEMBER_MANAGE')")
+    @PreAuthorize("hasAuthority('BUG_CREATE')")
     public ResponseEntity<SuccessResponse<BugResponseDTO>> createBug(
             @Valid @RequestBody BugRequestDTO dto) { // ← thêm @Valid
-        System.out.println("=== DEBUG DTO ===");
-        System.out.println("projectId = " + dto.getProjectId());
-        System.out.println("reporterId = " + dto.getReporterId());
-        System.out.println("originalTaskId = " + dto.getOriginalTaskId());
 
         BugResponseDTO bug = bugService.createBug(dto);
         return ResponseEntity.ok(SuccessResponse.of(bug, "Tạo bug thành công."));
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasAuthority('BUG_UPDATE')")
     public ResponseEntity<SuccessResponse<BugResponseDTO>> updateBug(@PathVariable UUID id,
             @RequestBody BugRequestDTO dto) {
         BugResponseDTO updatedBug = bugService.updateBug(id, dto);
@@ -57,21 +54,21 @@ public class BugController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('PROJECT_MANAGE_ANY', 'PROJECT_MEMBER_MANAGE')")
+    @PreAuthorize("hasAuthority('BUG_READ_ALL')")
     public ResponseEntity<SuccessResponse<Void>> deleteBug(@PathVariable UUID id) {
         bugService.deleteBug(id);
         return ResponseEntity.ok(SuccessResponse.of(null, "Xoá bug thành công."));
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('PROJECT_MANAGE_ANY', 'PROJECT_MEMBER_MANAGE')")
+    @PreAuthorize("hasAuthority('BUG_READ_ALL')")
     public ResponseEntity<SuccessResponse<BugResponseDTO>> getBugById(@PathVariable UUID id) {
         BugResponseDTO bug = bugService.getBugById(id);
         return ResponseEntity.ok(SuccessResponse.of(bug, "Lấy thông tin bug thành công."));
     }
 
     @GetMapping("/by-project/{projectId}")
-    @PreAuthorize("hasAnyAuthority('PROJECT_MANAGE_ANY', 'PROJECT_MEMBER_MANAGE')")
+    @PreAuthorize("hasAuthority('BUG_READ_ALL')")
     public ResponseEntity<SuccessResponse<List<BugResponseDTO>>> getBugsByProjectId(
             @PathVariable Integer projectId) {
 
