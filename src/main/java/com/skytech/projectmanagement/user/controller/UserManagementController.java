@@ -32,7 +32,7 @@ public class UserManagementController {
     private final UserService userService;
 
     @DeleteMapping("/{userId}")
-    @PreAuthorize("hasAuthority('USER_MANAGE')")
+    @PreAuthorize("hasAuthority('USER_DELETE')")
     public ResponseEntity<SuccessResponse<Object>> deleteUser(@PathVariable Integer userId) {
         userService.deleteUser(userId);
 
@@ -42,7 +42,7 @@ public class UserManagementController {
     }
 
     @GetMapping("/{userId}")
-    @PreAuthorize("hasAnyAuthority('USER_MANAGE', 'USER_READ')")
+    @PreAuthorize("hasAnyAuthority('USER_READ')")
     public ResponseEntity<SuccessResponse<UserResponse>> getUserById(@PathVariable Integer userId) {
         UserResponse userDto = userService.getUserById(userId);
 
@@ -53,7 +53,7 @@ public class UserManagementController {
     }
 
     @PatchMapping("/{userId}")
-    @PreAuthorize("hasAuthority('USER_MANAGE')")
+    @PreAuthorize("hasAuthority('USER_UPDATE')")
     public ResponseEntity<SuccessResponse<UserResponse>> updateUser(@PathVariable Integer userId,
             @Valid @RequestBody UpdateUserRequest request) {
 
@@ -66,7 +66,7 @@ public class UserManagementController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAuthority('USER_MANAGE')")
+    @PreAuthorize("hasAuthority('USER_CREATE')")
     public ResponseEntity<SuccessResponse<UserResponse>> createUser(
             @Valid @RequestBody CreateUserRequest request) {
 
@@ -79,7 +79,7 @@ public class UserManagementController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyAuthority('USER_MANAGE', 'USER_READ')")
+    @PreAuthorize("hasAnyAuthority('USER_READ')")
     public ResponseEntity<PaginatedResponse<UserResponse>> getAllUsers(
             @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "10") int size,
             @RequestParam(required = false) String search,

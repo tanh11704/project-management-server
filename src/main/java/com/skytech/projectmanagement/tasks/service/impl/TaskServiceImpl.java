@@ -3,11 +3,13 @@ package com.skytech.projectmanagement.tasks.service.impl;
 import java.util.ArrayList;
 import java.util.List;
 import com.skytech.projectmanagement.common.exception.ResourceNotFoundException;
+import com.skytech.projectmanagement.notification.service.NotificationService;
 import com.skytech.projectmanagement.project.entity.Project;
 import com.skytech.projectmanagement.project.repository.ProjectRepository;
 import com.skytech.projectmanagement.tasks.dto.CreateTaskRequestDTO;
 import com.skytech.projectmanagement.tasks.dto.TaskResponseDTO;
 import com.skytech.projectmanagement.tasks.dto.UpdateTaskRequestDTO;
+import com.skytech.projectmanagement.tasks.entity.TaskStatus;
 import com.skytech.projectmanagement.tasks.entity.Tasks;
 import com.skytech.projectmanagement.tasks.mapper.TaskMapper;
 import com.skytech.projectmanagement.tasks.repository.TaskRepository;
@@ -29,6 +31,7 @@ public class TaskServiceImpl implements TaskService {
     private final TaskMapper taskMapper;
     private final ProjectRepository projectRepository;
     private final UserRepository userRepository;
+    private final NotificationService notificationService;
 
     @Override
     public TaskResponseDTO getTaskById(Integer taskId) {
@@ -58,6 +61,12 @@ public class TaskServiceImpl implements TaskService {
         }
 
         Tasks saved = taskRepository.save(task);
+
+        // Check if the newly created task is already overdue
+        if (saved.getDueDate() != null && saved.getDueDate().isBefore(java.time.LocalDate.now())) {
+            notificationService.checkTaskForOverdue(saved.getId());
+        }
+
         return taskMapper.toDto(saved);
     }
 
@@ -66,8 +75,29 @@ public class TaskServiceImpl implements TaskService {
         Tasks existingTask = taskRepository.findById(taskId).orElseThrow(
                 () -> new ResourceNotFoundException("Không tìm thấy task với ID: " + taskId));
 
+        // Store original values for comparison
+        java.time.LocalDate originalDueDate = existingTask.getDueDate();
+        TaskStatus originalStatus = existingTask.getStatus();
+
         taskMapper.updateEntityFromDTO(requestDTO, existingTask);
         Tasks updated = taskRepository.save(existingTask);
+
+        // Check if we need to validate overdue status:
+        // 1. Due date was changed (added or modified)
+        // 2. Status changed from DONE/CLOSED back to active status
+        boolean dueDateChanged = (originalDueDate == null && updated.getDueDate() != null)
+                || (originalDueDate != null && updated.getDueDate() != null
+                && !originalDueDate.equals(updated.getDueDate()));
+
+        boolean statusChangedToActive =
+                (originalStatus == TaskStatus.DONE || originalStatus == TaskStatus.CLOSED)
+                        && updated.getStatus() != TaskStatus.DONE
+                        && updated.getStatus() != TaskStatus.CLOSED;
+
+        // Only check if a relevant change occurred
+        if (dueDateChanged || statusChangedToActive) {
+            notificationService.checkTaskForOverdue(updated.getId());
+        }
 
         return taskMapper.toDto(updated);
     }
@@ -81,17 +111,15 @@ public class TaskServiceImpl implements TaskService {
 
     @Override
     public List<TaskResponseDTO> getTasks(Integer projectId, Integer assigneeId, String status,
-            String priority) {
+                                          String priority) {
         var spec = filter(projectId != null ? projectId.intValue() : null,
                 assigneeId != null ? assigneeId.intValue() : null, status, priority);
         return taskRepository.findAll(spec).stream().map(taskMapper::toDto).toList();
     }
 
 
-
-
     private Specification<Tasks> filter(Integer projectId, Integer assigneeId, String status,
-            String priority) {
+                                        String priority) {
         return (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
 

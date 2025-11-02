@@ -4,7 +4,11 @@ import com.skytech.projectmanagement.tasks.dto.CreateTaskRequestDTO;
 import com.skytech.projectmanagement.tasks.dto.TaskResponseDTO;
 import com.skytech.projectmanagement.tasks.dto.UpdateTaskRequestDTO;
 import com.skytech.projectmanagement.tasks.entity.Tasks;
-import org.mapstruct.*;
+import org.mapstruct.BeanMapping;
+import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
+import org.mapstruct.MappingTarget;
+import org.mapstruct.NullValuePropertyMappingStrategy;
 
 @Mapper(componentModel = "spring")
 public interface TaskMapper {

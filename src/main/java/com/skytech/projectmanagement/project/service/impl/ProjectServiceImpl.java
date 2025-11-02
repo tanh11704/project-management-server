@@ -28,7 +28,8 @@ import com.skytech.projectmanagement.project.entity.ProjectRole;
 import com.skytech.projectmanagement.project.repository.ProjectMemberRepository;
 import com.skytech.projectmanagement.project.repository.ProjectRepository;
 import com.skytech.projectmanagement.project.service.ProjectService;
-import com.skytech.projectmanagement.teams.service.TeamService;
+import com.skytech.projectmanagement.teams.entity.TeamMember;
+import com.skytech.projectmanagement.teams.repository.TeamMemberRepository;
 import com.skytech.projectmanagement.user.entity.User;
 import com.skytech.projectmanagement.user.service.UserService;
 import org.springframework.data.domain.Page;
@@ -50,7 +51,7 @@ public class ProjectServiceImpl implements ProjectService {
     private final ProjectRepository projectRepository;
     private final ProjectMemberRepository projectMemberRepository;
     private final UserService userService;
-    private final TeamService teamService;
+    private final TeamMemberRepository teamMemberRepository;
 
     @Override
     public PaginatedResponse<ProjectSummaryResponse> getProjects(Pageable pageable, String search,
@@ -60,7 +61,7 @@ public class ProjectServiceImpl implements ProjectService {
 
         Specification<Project> authSpec = createAuthorizationSpecification(authentication);
 
-        Specification<Project> finalSpec = Specification.where(searchSpec).and(authSpec);
+        Specification<Project> finalSpec = searchSpec.and(authSpec);
 
         Page<Project> projectPage = projectRepository.findAll(finalSpec, pageable);
 
@@ -362,11 +363,10 @@ public class ProjectServiceImpl implements ProjectService {
     }
 
     private Specification<Project> createAuthorizationSpecification(Authentication authentication) {
-        // Lấy danh sách quyền của user
-        Set<String> roles = authentication.getAuthorities().stream()
+        Set<String> permissions = authentication.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority).collect(Collectors.toSet());
 
-        if (roles.contains("ROLE_PRODUCT_OWNER")) {
+        if (permissions.contains("PROJECT_READ_ALL")) {
             return (root, query, cb) -> cb.conjunction();
         }
 
@@ -397,22 +397,68 @@ public class ProjectServiceImpl implements ProjectService {
     public List<ProjectMemberResponse> importTeamMembers(Integer projectId,
             ImportTeamRequest request, Authentication auth) {
 
+        // 1. Kiểm tra project tồn tại
         Project project = projectRepository.findById(projectId).orElseThrow(
                 () -> new ResourceNotFoundException("Không tìm thấy dự án với ID: " + projectId));
+
+        // 2. Kiểm tra quyền (admin hoặc creator)
         User currentUser = userService.findUserByEmail(auth.getName());
         checkAdminOrCreatorPermission(project, currentUser, auth);
 
-        // List<Integer> userIdsFromTeam = teamService.getMemberUserIds(request.teamId());
+        // 3. Lấy danh sách user IDs từ team
+        List<TeamMember> teamMembers = teamMemberRepository.findByTeamId(request.teamId());
 
-        // 3. Lấy danh sách thành viên đã có trong dự án
-        // 4. Lọc ra những user ID MỚI
+        if (teamMembers.isEmpty()) {
+            return List.of();
+        }
+
+        Set<Integer> userIdsFromTeam =
+                teamMembers.stream().map(TeamMember::getUserId).collect(Collectors.toSet());
+
+        // 4. Lấy danh sách thành viên đã có trong dự án
+        List<ProjectMember> existingMembers = projectMemberRepository.findById_ProjectId(projectId);
+
+        Set<Integer> existingUserIds = existingMembers.stream()
+                .map(member -> member.getId().getUserId()).collect(Collectors.toSet());
+
+        // 5. Lọc ra những user ID MỚI (chưa có trong project)
+        Set<Integer> newUserIds = userIdsFromTeam.stream()
+                .filter(userId -> !existingUserIds.contains(userId)).collect(Collectors.toSet());
+
         // Nếu không có ai mới -> trả về rỗng
-        // 5. KIỂM TRA USER TỒN TẠI (400) - (Rule 1.1 - Gọi UserService)
-        // 6. Tạo và LƯU các thành viên mới
-        // 7. LẤY THÔNG TIN ĐẦY ĐỦ (Rule 1.1 - Gọi UserService)
-        // 8. TẠO RESPONSE DTO (Rule 4.2)
+        if (newUserIds.isEmpty()) {
+            return List.of();
+        }
 
-        throw new UnsupportedOperationException("Unimplemented method 'importTeamMembers'");
+        // 6. Kiểm tra user tồn tại
+        userService.validateUsersExist(newUserIds);
+
+        // 7. Tạo và lưu các thành viên mới với defaultRole
+        List<ProjectMember> newMembers = new ArrayList<>();
+        for (Integer userId : newUserIds) {
+            ProjectMember newMember = new ProjectMember();
+
+            ProjectMemberId projectMemberId = new ProjectMemberId();
+            projectMemberId.setUserId(userId);
+            projectMemberId.setProjectId(projectId);
+
+            newMember.setId(projectMemberId);
+            newMember.setRole(request.defaultRole());
+            newMembers.add(newMember);
+        }
+
+        List<ProjectMember> savedMembers = projectMemberRepository.saveAll(newMembers);
+
+        // 8. Lấy thông tin đầy đủ của users
+        Map<Integer, User> userMap = userService.findUsersMapByIds(newUserIds);
+
+        return savedMembers.stream().map(member -> {
+            User user = userMap.get(member.getId().getUserId());
+            return new ProjectMemberResponse(member.getId().getUserId(),
+                    (user != null) ? user.getFullName() : "N/A",
+                    (user != null) ? user.getAvatar() : null, member.getRole(),
+                    member.getJoinedAt());
+        }).toList();
     }
 
 }

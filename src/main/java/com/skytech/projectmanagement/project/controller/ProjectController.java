@@ -5,6 +5,7 @@ import com.skytech.projectmanagement.common.dto.PaginatedResponse;
 import com.skytech.projectmanagement.common.dto.SuccessResponse;
 import com.skytech.projectmanagement.project.dto.AddMemberRequest;
 import com.skytech.projectmanagement.project.dto.CreateProjectRequest;
+import com.skytech.projectmanagement.project.dto.ImportTeamRequest;
 import com.skytech.projectmanagement.project.dto.ProjectDetailsResponse;
 import com.skytech.projectmanagement.project.dto.ProjectMemberResponse;
 import com.skytech.projectmanagement.project.dto.ProjectSummaryResponse;
@@ -39,7 +40,7 @@ public class ProjectController {
     private final ProjectService projectService;
 
     @DeleteMapping("/{projectId}/members/{userId}")
-    @PreAuthorize("hasAnyAuthority('PROJECT_MANAGE_ANY', 'PROJECT_MEMBER_MANAGE')")
+    @PreAuthorize("hasAuthority('PROJECT_MEMBER_MANAGE')")
     public ResponseEntity<SuccessResponse<Object>> removeProjectMember(
             @PathVariable Integer projectId, @PathVariable Integer userId) {
 
@@ -53,7 +54,7 @@ public class ProjectController {
     }
 
     @PatchMapping("/{projectId}/members/{userId}")
-    @PreAuthorize("hasAnyAuthority('PROJECT_MANAGE_ANY', 'PROJECT_MEMBER_MANAGE')")
+    @PreAuthorize("hasAuthority('PROJECT_MEMBER_MANAGE')")
     public ResponseEntity<SuccessResponse<ProjectMemberResponse>> updateMemberRole(
             @PathVariable Integer projectId, @PathVariable Integer userId,
             @Valid @RequestBody UpdateMemberRoleRequest request) {
@@ -69,8 +70,28 @@ public class ProjectController {
         return ResponseEntity.ok(response);
     }
 
+    @PostMapping("/{projectId}/members/import")
+    @PreAuthorize("hasAuthority('PROJECT_MEMBER_MANAGE')")
+    public ResponseEntity<SuccessResponse<List<ProjectMemberResponse>>> importTeamMembers(
+            @PathVariable Integer projectId, @Valid @RequestBody ImportTeamRequest request) {
+
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        List<ProjectMemberResponse> importedMembers =
+                projectService.importTeamMembers(projectId, request, authentication);
+
+        String message = importedMembers.isEmpty()
+                ? "Không có thành viên mới được thêm vào. Tất cả thành viên của team đã có trong dự án."
+                : "Đã thêm " + importedMembers.size() + " thành viên từ team vào dự án.";
+
+        SuccessResponse<List<ProjectMemberResponse>> response =
+                SuccessResponse.of(importedMembers, message);
+
+        return new ResponseEntity<>(response, HttpStatus.CREATED);
+    }
+
     @PostMapping("/{projectId}/members")
-    @PreAuthorize("hasAnyAuthority('PROJECT_MANAGE_ANY', 'PROJECT_MEMBER_MANAGE')")
+    @PreAuthorize("hasAuthority('PROJECT_MEMBER_MANAGE')")
     public ResponseEntity<SuccessResponse<List<ProjectMemberResponse>>> addProjectMembers(
             @PathVariable Integer projectId, @Valid @RequestBody List<AddMemberRequest> requests) {
 
@@ -86,7 +107,7 @@ public class ProjectController {
     }
 
     @GetMapping("/{projectId}/members")
-    @PreAuthorize("hasAnyAuthority('PROJECT_MANAGE_ANY', 'PROJECT_MEMBER_MANAGE')")
+    @PreAuthorize("hasAuthority('PROJECT_MEMBER_MANAGE')")
     public ResponseEntity<SuccessResponse<List<ProjectMemberResponse>>> getProjectMembers(
             @PathVariable Integer projectId) {
 
@@ -102,7 +123,7 @@ public class ProjectController {
     }
 
     @PatchMapping("/{projectId}")
-    @PreAuthorize("hasAuthority('PROJECT_MANAGE_ANY', 'PROJECT_CREATE')")
+    @PreAuthorize("hasAuthority('PROJECT_UPDATE')")
     public ResponseEntity<SuccessResponse<ProjectSummaryResponse>> updateProject(
             @PathVariable Integer projectId, @Valid @RequestBody UpdateProjectRequest request) {
 
@@ -118,7 +139,7 @@ public class ProjectController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAuthority('PROJECT_MANAGE_ANY', 'PROJECT_CREATE')")
+    @PreAuthorize("hasAuthority('PROJECT_CREATE')")
     public ResponseEntity<SuccessResponse<ProjectSummaryResponse>> createProject(
             @Valid @RequestBody CreateProjectRequest request) {
 
@@ -134,7 +155,7 @@ public class ProjectController {
     }
 
     @DeleteMapping("/{projectId}")
-    @PreAuthorize("hasAuthority('PROJECT_MANAGE_ANY', 'PROJECT_CREATE')")
+    @PreAuthorize("hasAuthority('PROJECT_DELETE')")
     public ResponseEntity<SuccessResponse<Object>> deleteProject(@PathVariable Integer projectId) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
@@ -146,7 +167,6 @@ public class ProjectController {
     }
 
     @GetMapping("/{projectId}")
-    @PreAuthorize("hasAuthority('PROJECT_MANAGE_ANY', 'PROJECT_READ_ALL')")
     public ResponseEntity<SuccessResponse<ProjectDetailsResponse>> getProjectById(
             @PathVariable Integer projectId) {
 
@@ -162,7 +182,6 @@ public class ProjectController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAuthority('PROJECT_MANAGE_ANY', 'PROJECT_READ_ALL')")
     public ResponseEntity<PaginatedResponse<ProjectSummaryResponse>> getProjects(
             @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "10") int size,
             @RequestParam(required = false) String search,

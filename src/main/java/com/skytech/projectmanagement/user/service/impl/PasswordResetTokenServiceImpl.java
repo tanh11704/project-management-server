@@ -3,11 +3,11 @@ package com.skytech.projectmanagement.user.service.impl;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.UUID;
-import com.skytech.projectmanagement.common.exception.InvalidResetTokenException;
 import com.skytech.projectmanagement.user.entity.PasswordResetToken;
 import com.skytech.projectmanagement.user.entity.User;
 import com.skytech.projectmanagement.user.repository.PasswordResetTokenRepository;
 import com.skytech.projectmanagement.user.service.PasswordResetTokenService;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -17,37 +17,26 @@ import lombok.RequiredArgsConstructor;
 public class PasswordResetTokenServiceImpl implements PasswordResetTokenService {
 
     private final PasswordResetTokenRepository tokenRepository;
+    private final PasswordEncoder passwordEncoder;
 
     @Override
     @Transactional
     public String createResetToken(User user) {
         tokenRepository.deleteByUserId(user.getId());
 
-        String token = UUID.randomUUID().toString();
+        String rawTempPassword = UUID.randomUUID().toString().substring(0, 8);
         Instant expiresAt = Instant.now().plus(1, ChronoUnit.HOURS);
+
+        String hashedTempPassword = passwordEncoder.encode(rawTempPassword);
 
         PasswordResetToken resetToken = new PasswordResetToken();
         resetToken.setUserId(user.getId());
-        resetToken.setToken(token);
+        resetToken.setHashToken(hashedTempPassword);
         resetToken.setExpiresAt(expiresAt);
 
         tokenRepository.save(resetToken);
 
-        return token;
-    }
-
-    @Override
-    @Transactional(noRollbackFor = InvalidResetTokenException.class)
-    public PasswordResetToken validateResetToken(String token) {
-        PasswordResetToken tokenEntity = tokenRepository.findByToken(token).orElseThrow(
-                () -> new InvalidResetTokenException("Token đặt lại mật khẩu không tìm thấy."));
-
-        if (tokenEntity.getExpiresAt().isBefore(Instant.now())) {
-            tokenRepository.delete(tokenEntity);
-            throw new InvalidResetTokenException("Token đặt lại mật khẩu đã hết hạn.");
-        }
-
-        return tokenEntity;
+        return rawTempPassword;
     }
 
     @Override

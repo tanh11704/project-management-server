@@ -1,0 +1,49 @@
+spring:
+  application:
+    name: projectmanagement
+  datasource:
+    url: jdbc:postgresql://${PGHOST}:${PGPORT}/${PGDATABASE}
+    username: ${PGUSER}
+    password: ${PGPASSWORD}
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
+  jackson:
+    property-naming-strategy: SNAKE_CASE
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: tanh11704@gmail.com
+    password: ohwk czxf pzvr lsbn
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: true
+
+jwt:
+  secret-key: daf66e01593f61a15b857cf433aae03a005812b31234e149036bcc8dee755dbb
+  expiration-ms: 900000 # 15 minutes
+  refresh-expiration-ms: 604800000 # 7 days
+
+cloudinary:
+  #   url: cloudinary://374243676686272:uG_J9b9OE4_nRTJTCe7ZkPyR7gQ@dobtgdvzk
+  url: ${CLOUDINARYURL}
+
+server:
+  port: 8080
+
+seeder:
+  admin:
+    email: ${ADMINEMAIL}
+    password: ${ADMINPASSWORD}

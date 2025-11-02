@@ -1,22 +1,28 @@
 package com.skytech.projectmanagement.auth.service.impl;
 
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 import com.skytech.projectmanagement.auth.dto.CreateRoleRequest;
 import com.skytech.projectmanagement.auth.dto.PermissionResponse;
 import com.skytech.projectmanagement.auth.dto.RoleResponse;
 import com.skytech.projectmanagement.auth.dto.SyncRolePermissionsRequest;
+import com.skytech.projectmanagement.auth.dto.SyncUserPermissionsRequest;
 import com.skytech.projectmanagement.auth.dto.UpdateUserRolesRequest;
 import com.skytech.projectmanagement.auth.entity.Permission;
 import com.skytech.projectmanagement.auth.entity.Role;
 import com.skytech.projectmanagement.auth.entity.RolePermission;
 import com.skytech.projectmanagement.auth.entity.RolePermissionId;
+import com.skytech.projectmanagement.auth.entity.UserPermission;
+import com.skytech.projectmanagement.auth.entity.UserPermissionId;
 import com.skytech.projectmanagement.auth.entity.UserRole;
 import com.skytech.projectmanagement.auth.entity.UserRoleId;
 import com.skytech.projectmanagement.auth.repository.PermissionRepository;
 import com.skytech.projectmanagement.auth.repository.RolePermissionRepository;
 import com.skytech.projectmanagement.auth.repository.RoleRepository;
+import com.skytech.projectmanagement.auth.repository.UserPermissionRepository;
 import com.skytech.projectmanagement.auth.repository.UserRoleRepository;
+import com.skytech.projectmanagement.auth.service.PermissionService;
 import com.skytech.projectmanagement.auth.service.RoleService;
 import com.skytech.projectmanagement.common.exception.ResourceNotFoundException;
 import com.skytech.projectmanagement.common.exception.RoleNameExistsException;
@@ -35,7 +41,9 @@ public class RoleServiceImpl implements RoleService {
     private final PermissionRepository permissionRepository;
     private final RolePermissionRepository rolePermissionRepository;
     private final UserRoleRepository userRoleRepository;
+    private final UserPermissionRepository userPermissionRepository;
     private final UserService userService;
+    private final PermissionService permissionService;
 
     @Override
     @Transactional(readOnly = true)
@@ -152,5 +160,66 @@ public class RoleServiceImpl implements RoleService {
         Role savedRole = roleRepository.save(newRole);
 
         return RoleResponse.fromEntity(savedRole);
+    }
+
+    @Override
+    @Transactional
+    public List<PermissionResponse> syncPermissionsForUser(Integer userId,
+            SyncUserPermissionsRequest request) {
+
+        if (!userService.existsById(userId)) {
+            throw new ResourceNotFoundException("Không tìm thấy người dùng với ID: " + userId);
+        }
+
+        List<Integer> requestedIds = request.getPermissionIds();
+
+        long validIdsCount = permissionRepository.countByIdIn(requestedIds);
+        if (validIdsCount != requestedIds.size()) {
+            throw new ValidationException(
+                    "Dữ liệu không hợp lệ: Một hoặc nhiều Permission ID không tồn tại.");
+        }
+
+        Set<Integer> leafPermissionIds =
+                permissionService.filterLeafPermissionIds(new java.util.HashSet<>(requestedIds));
+
+        userPermissionRepository.deleteById_UserId(userId);
+
+        List<UserPermission> newPermissions = leafPermissionIds.stream().map(permissionId -> {
+            UserPermissionId id = new UserPermissionId();
+            id.setUserId(userId);
+            id.setPermissionId(permissionId);
+
+            UserPermission up = new UserPermission();
+            up.setId(id);
+            return up;
+        }).collect(Collectors.toList());
+
+        userPermissionRepository.saveAll(newPermissions);
+
+        List<Permission> updatedPermissions =
+                permissionRepository.findByIdIn(new java.util.ArrayList<>(leafPermissionIds));
+
+        return updatedPermissions.stream().map(PermissionResponse::fromEntity)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<PermissionResponse> getPermissionsByUserId(Integer userId) {
+        if (!userService.existsById(userId)) {
+            throw new ResourceNotFoundException("Không tìm thấy người dùng với ID: " + userId);
+        }
+
+        List<Permission> allPermissions = permissionRepository.findAll();
+
+        Set<Integer> userPermissionIds = userPermissionRepository.findAll().stream()
+                .filter(up -> up.getId().getUserId().equals(userId))
+                .map(up -> up.getId().getPermissionId()).collect(Collectors.toSet());
+
+        List<Permission> userPermissions = allPermissions.stream()
+                .filter(p -> userPermissionIds.contains(p.getId())).collect(Collectors.toList());
+
+        return userPermissions.stream().map(PermissionResponse::fromEntity)
+                .collect(Collectors.toList());
     }
 }

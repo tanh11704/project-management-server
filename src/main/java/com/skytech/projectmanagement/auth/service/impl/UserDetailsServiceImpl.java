@@ -4,6 +4,8 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 import com.skytech.projectmanagement.auth.repository.PermissionRepository;
+import com.skytech.projectmanagement.auth.security.CustomUserDetails;
+import com.skytech.projectmanagement.auth.service.PermissionService;
 import com.skytech.projectmanagement.common.exception.ResourceNotFoundException;
 import com.skytech.projectmanagement.user.entity.User;
 import com.skytech.projectmanagement.user.service.UserService;
@@ -22,6 +24,7 @@ public class UserDetailsServiceImpl implements UserDetailsService {
 
     private final UserService userService;
     private final PermissionRepository permissionRepository;
+    private final PermissionService permissionService;
 
     @Override
     @Transactional(readOnly = true)
@@ -34,19 +37,20 @@ public class UserDetailsServiceImpl implements UserDetailsService {
             throw new UsernameNotFoundException("Không tìm thấy người dùng với email: " + email);
         }
 
-        Set<String> permissions;
+        Set<String> leafPermissions;
 
         if (Boolean.TRUE.equals(user.getIsAdmin())) {
-            permissions = permissionRepository.findAllPermissionNames();
+            leafPermissions = permissionRepository.findAllPermissionNames();
         } else {
-            permissions = permissionRepository.findHybridPermissionsByUserId(user.getId());
+            Set<String> storedLeafPermissions =
+                    permissionRepository.findLeafPermissionsByUserId(user.getId());
+            leafPermissions = permissionService.getEffectivePermissions(storedLeafPermissions);
         }
 
-        List<GrantedAuthority> authorities =
-                permissions.stream().map(SimpleGrantedAuthority::new).collect(Collectors.toList());
+        List<GrantedAuthority> authorities = leafPermissions.stream()
+                .map(SimpleGrantedAuthority::new).collect(Collectors.toList());
 
-        return new org.springframework.security.core.userdetails.User(user.getEmail(),
-                user.getHashPassword(), authorities);
+        return new CustomUserDetails(user, authorities);
     }
 
 }

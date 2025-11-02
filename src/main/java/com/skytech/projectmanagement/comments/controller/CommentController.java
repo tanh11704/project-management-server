@@ -26,6 +26,7 @@ public class CommentController {
     private final UserService userService;
     private final JwtTokenProvider jwtTokenProvider;
     @GetMapping
+    @PreAuthorize("hasAnyAuthority('PROJECT_MANAGE_ANY', 'PROJECT_MEMBER_MANAGE')")
     public ResponseEntity<?> getCommentsByEntity(
             @RequestParam EntityType entityType,
             @RequestParam String entityId
@@ -69,6 +70,7 @@ public class CommentController {
 
 
     @DeleteMapping("/{commentId}")
+    @PreAuthorize("hasAnyAuthority('PROJECT_MANAGE_ANY', 'PROJECT_MEMBER_MANAGE')")
     public ResponseEntity<?> deleteComment(
             @PathVariable UUID commentId,
             @RequestHeader("Authorization") String authHeader
