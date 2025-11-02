@@ -18,21 +18,21 @@ public class TaskAssigneeController {
     private final TaskAssigneeService taskAssigneeService;
 
     @PostMapping("/{userId}")
-    @PreAuthorize("hasAuthority('ROLE_PRODUCT_OWNER')")
+    @PreAuthorize("hasAnyAuthority('PROJECT_MANAGE_ANY', 'PROJECT_MEMBER_MANAGE')")
     public ResponseEntity<?> assignUserToTask(@PathVariable Integer taskId,
                                               @PathVariable Integer userId){
         TaskAssigneeResponseDTO dto = taskAssigneeService.assignUserToTask(taskId, userId);
         return ResponseEntity.ok(SuccessResponse.of(dto, "Thêm user vào task thành công."));
     }
     @DeleteMapping("/{userId}")
-    @PreAuthorize("hasAuthority('ROLE_PRODUCT_OWNER')")
+    @PreAuthorize("hasAnyAuthority('PROJECT_MANAGE_ANY', 'PROJECT_MEMBER_MANAGE')")
     public ResponseEntity<?> unassignUserFromTask(@PathVariable Integer taskId,
                                                   @PathVariable Integer userId) {
         taskAssigneeService.unassignUserFromTask(taskId, userId);
         return ResponseEntity.ok(SuccessResponse.of(null, "Bỏ gán user khỏi task thành công."));
     }
     @GetMapping
-    @PreAuthorize("hasAuthority('ROLE_PRODUCT_OWNER')")
+    @PreAuthorize("hasAnyAuthority('PROJECT_MANAGE_ANY', 'PROJECT_MEMBER_MANAGE')")
     public ResponseEntity<?> getAssigneesByTask(@PathVariable Integer taskId) {
         var list = taskAssigneeService.getAssigneesByTask(taskId);
         return ResponseEntity.ok(SuccessResponse.of(list, "Lấy danh sách assignee thành công."));

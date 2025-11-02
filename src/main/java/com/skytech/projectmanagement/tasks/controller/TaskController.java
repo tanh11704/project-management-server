@@ -82,7 +82,7 @@ public class TaskController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAuthority('ROLE_PRODUCT_OWNER')")
+    @PreAuthorize("hasAnyAuthority('PROJECT_MANAGE_ANY', 'PROJECT_MEMBER_MANAGE')")
     public ResponseEntity<SuccessResponse<TaskResponseDTO>> createTask(
             @Valid @RequestBody CreateTaskRequestDTO requestDTO, Authentication authentication) {
 
@@ -100,13 +100,14 @@ public class TaskController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAuthority('ROLE_PRODUCT_OWNER')")
+    @PreAuthorize("hasAnyAuthority('PROJECT_MANAGE_ANY', 'PROJECT_MEMBER_MANAGE')")
     public ResponseEntity<SuccessResponse<Void>> deleteTask(@PathVariable("id") Integer taskId) {
         taskService.deleteTask(taskId);
         return ResponseEntity.ok(SuccessResponse.of(null, "Xóa task thành công"));
     }
 
     @GetMapping
+    @PreAuthorize("hasAnyAuthority('PROJECT_MANAGE_ANY', 'PROJECT_MEMBER_MANAGE')")
     public ResponseEntity<SuccessResponse<List<TaskResponseDTO>>> getTasks(
             @RequestParam(required = false) Integer projectId,
             @RequestParam(required = false) Integer assigneeId,

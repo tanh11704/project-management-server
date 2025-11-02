@@ -44,4 +44,6 @@ public interface UserService {
     void changePassword(String userEmail, ChangePasswordRequest request);
 
     ResetPasswordsResponse resetPasswordsForUsers(ResetPasswordsRequest request);
+
+    User getUserEntityById(Integer userId);
 }

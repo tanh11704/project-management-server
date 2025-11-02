@@ -117,8 +117,18 @@ public class TaskServiceImpl implements TaskService {
         return taskRepository.findAll(spec).stream().map(taskMapper::toDto).toList();
     }
 
+<<<<<<< HEAD:src/main/java/com/skytech/projectmanagement/tasks/service/TaskServiceImpl.java
+    @Override
+    public Tasks getTaskEntityById(Integer taskId) {
+        return taskRepository.findById(taskId)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy task với ID: " + taskId));
+    }
+
+    private Specification<Tasks> filter(Integer projectId, Integer assigneeId, String status, String priority){
+=======
     private Specification<Tasks> filter(Integer projectId, Integer assigneeId, String status,
             String priority) {
+>>>>>>> origin:src/main/java/com/skytech/projectmanagement/tasks/service/impl/TaskServiceImpl.java
         return (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
 
@@ -139,4 +149,5 @@ public class TaskServiceImpl implements TaskService {
             return cb.and(predicates.toArray(new Predicate[0]));
         };
     }
+
 }

@@ -28,6 +28,7 @@ public class TeamMemberServiceImpl implements TeamMemberService {
 
     @Override
     public List<TeamMemberDTO> getMembersByTeamId(UUID teamId) {
+        teamService.getTeamById(teamId);
         List<TeamMember> members = teamMemberRepository.findByTeamId(teamId);
 
         return members.stream().map(member -> {

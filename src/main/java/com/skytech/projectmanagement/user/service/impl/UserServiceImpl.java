@@ -89,6 +89,12 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    public User getUserEntityById(Integer userId) {
+        return userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy user với ID: " + userId));
+    }
+
+    @Override
     @Transactional(readOnly = true)
     public UserResponse getUserProfile(String email) {
         User user = findUserByEmail(email);

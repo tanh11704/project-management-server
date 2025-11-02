@@ -32,7 +32,7 @@ public class TeamMemberController {
     }
 
     @PostMapping("/{teamId}/{userId}")
-    @PreAuthorize("hasAuthority('ROLE_PRODUCT_OWNER')")
+    @PreAuthorize("hasAnyAuthority('PROJECT_MANAGE_ANY', 'PROJECT_MEMBER_MANAGE')")
     public ResponseEntity<?> addMember(@PathVariable UUID teamId, @PathVariable Integer userId) {
         TeamMember member = teamMemberService.addMember(teamId, userId);
 
@@ -43,9 +43,11 @@ public class TeamMemberController {
 
 
     @DeleteMapping("/{teamId}/{userId}")
-    @PreAuthorize("hasAuthority('ROLE_PRODUCT_OWNER')")
+    @PreAuthorize("hasAnyAuthority('PROJECT_MANAGE_ANY', 'PROJECT_MEMBER_MANAGE')")
     public ResponseEntity<?> removeMember(@PathVariable UUID teamId, @PathVariable Integer userId) {
         teamMemberService.removeMember(teamId, userId);
         return ResponseEntity.ok(SuccessResponse.of(null, "Xóa thành viên khỏi team thành công."));
     }
+
+
 }

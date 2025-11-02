@@ -33,7 +33,7 @@ public class TeamsController {
     private final JwtTokenProvider jwtTokenProvider;
 
     @GetMapping
-    @PreAuthorize("hasAuthority('ROLE_PRODUCT_OWNER')")
+    @PreAuthorize("hasAnyAuthority('PROJECT_MANAGE_ANY', 'PROJECT_MEMBER_MANAGE')")
     public ResponseEntity<PaginatedResponse<TeamsDTO>> getAllTeams(Pageable pageable) {
         Page<TeamsDTO> page = teamsService.getAllTeams(pageable);
         Pagination pagination = new Pagination(page.getNumber(), page.getSize(),
@@ -50,13 +50,14 @@ public class TeamsController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAuthority('ROLE_PRODUCT_OWNER')")
+    @PreAuthorize("hasAnyAuthority('PROJECT_MANAGE_ANY', 'PROJECT_MEMBER_MANAGE')")
     public ResponseEntity<SuccessResponse<TeamsDTO>> createTeam(@RequestBody TeamsDTO dto) {
         TeamsDTO team = teamsService.createTeam(dto);
         return ResponseEntity.ok(SuccessResponse.of(team, "Tạo team thành công."));
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasAnyAuthority('PROJECT_MANAGE_ANY', 'PROJECT_MEMBER_MANAGE')")
     public ResponseEntity<SuccessResponse<TeamsDTO>> updateTeam(@PathVariable UUID id,
             @RequestBody TeamsDTO dto) {
         TeamsDTO updatedTeam = teamsService.updateTeam(id, dto);
@@ -64,7 +65,7 @@ public class TeamsController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAuthority('ROLE_PRODUCT_OWNER')")
+    @PreAuthorize("hasAnyAuthority('PROJECT_MANAGE_ANY', 'PROJECT_MEMBER_MANAGE')")
     public ResponseEntity<SuccessResponse<Void>> deleteTeam(@PathVariable UUID id) {
         teamsService.deleteTeam(id);
         return ResponseEntity.ok(SuccessResponse.of(null, "Xoá team thành công."));
