@@ -14,6 +14,5 @@ public interface TaskService {
     TaskResponseDTO updateTask(Integer taskId, UpdateTaskRequestDTO requestDTO);
     void deleteTask(Integer taskId);
     List<TaskResponseDTO> getTasks(Integer projectId, Integer assigneeId, String status, String priority);
-    Tasks getTaskEntityById(Integer taskId);
 
 }
