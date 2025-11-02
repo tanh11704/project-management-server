@@ -1,5 +1,6 @@
 package com.skytech.projectmanagement.user.service.impl;
 
+import java.time.Instant;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -21,7 +22,9 @@ import com.skytech.projectmanagement.user.dto.ResetPasswordsRequest;
 import com.skytech.projectmanagement.user.dto.ResetPasswordsResponse;
 import com.skytech.projectmanagement.user.dto.UpdateUserRequest;
 import com.skytech.projectmanagement.user.dto.UserResponse;
+import com.skytech.projectmanagement.user.entity.PasswordResetToken;
 import com.skytech.projectmanagement.user.entity.User;
+import com.skytech.projectmanagement.user.repository.PasswordResetTokenRepository;
 import com.skytech.projectmanagement.user.repository.UserRefreshTokenRepository;
 import com.skytech.projectmanagement.user.repository.UserRepository;
 import com.skytech.projectmanagement.user.service.UserService;
@@ -44,6 +47,7 @@ public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
     private final UserRefreshTokenRepository userRefreshTokenRepository;
+    private final PasswordResetTokenRepository passwordResetTokenRepository;
     private final PasswordEncoder passwordEncoder;
     private final FileStorageService fileStorageService;
     private final EmailService emailService;
@@ -77,21 +81,49 @@ public class UserServiceImpl implements UserService {
         User currentUser = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy người dùng."));
 
-        if (!passwordEncoder.matches(request.oldPassword(), currentUser.getHashPassword())) {
-            throw new InvalidOldPasswordException(
-                    "Mật khẩu cũ bạn đã nhập không khớp với mật khẩu hiện tại.");
+        // Kiểm tra mật khẩu cũ: có thể là mật khẩu chính hoặc mật khẩu tạm thời
+        boolean isOldPasswordValid =
+                passwordEncoder.matches(request.oldPassword(), currentUser.getHashPassword());
+
+        // Nếu không khớp với mật khẩu chính, kiểm tra mật khẩu tạm thời
+        if (!isOldPasswordValid) {
+            var tempTokenOpt = passwordResetTokenRepository.findByUserId(currentUser.getId());
+            if (tempTokenOpt.isPresent()) {
+                PasswordResetToken token = tempTokenOpt.get();
+                if (token.getExpiresAt().isAfter(Instant.now())) {
+                    // Kiểm tra mật khẩu tạm thời
+                    if (passwordEncoder.matches(request.oldPassword(), token.getHashToken())) {
+                        isOldPasswordValid = true;
+                        // Xóa token tạm thời sau khi xác thực thành công
+                        passwordResetTokenRepository.delete(token);
+                    }
+                } else {
+                    // Token đã hết hạn, xóa nó
+                    passwordResetTokenRepository.delete(token);
+                }
+            }
+        } else {
+            // Nếu dùng mật khẩu chính hợp lệ, cũng xóa token tạm thời nếu có
+            passwordResetTokenRepository.deleteByUserId(currentUser.getId());
         }
 
-        currentUser.setHashPassword(passwordEncoder.encode(request.newPassword()));
+        if (!isOldPasswordValid) {
+            throw new InvalidOldPasswordException(
+                    "Mật khẩu cũ bạn đã nhập không khớp với mật khẩu hiện tại hoặc mật khẩu tạm thời.");
+        }
 
+        // Cập nhật mật khẩu mới
+        currentUser.setHashPassword(passwordEncoder.encode(request.newPassword()));
         userRepository.save(currentUser);
+
+        // Xóa tất cả refresh tokens để đăng xuất khỏi các thiết bị khác
         userRefreshTokenRepository.deleteByUserId(currentUser.getId());
     }
 
     @Override
     public User getUserEntityById(Integer userId) {
-        return userRepository.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy user với ID: " + userId));
+        return userRepository.findById(userId).orElseThrow(
+                () -> new ResourceNotFoundException("Không tìm thấy user với ID: " + userId));
     }
 
     @Override

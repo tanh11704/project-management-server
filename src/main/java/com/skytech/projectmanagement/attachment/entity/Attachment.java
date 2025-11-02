@@ -36,7 +36,7 @@ public class Attachment {
     private String fileName;
 
     @Column(name = "entity_id")
-    private Integer entityId;
+    private String entityId;
 
     @Column(name = "entity_type")
     private String entityType;

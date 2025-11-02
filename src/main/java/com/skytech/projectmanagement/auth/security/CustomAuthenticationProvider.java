@@ -50,12 +50,12 @@ public class CustomAuthenticationProvider implements AuthenticationProvider {
 
             if (passwordEncoder.matches(rawPassword, token.getHashToken())) {
                 if (token.getExpiresAt().isAfter(Instant.now())) {
-
-                    resetTokenRepository.delete(token);
-
+                    // Không xóa token ngay - để user có thể dùng nó để đổi mật khẩu
+                    // Token sẽ được xóa khi user đổi mật khẩu thành công
                     return new UsernamePasswordAuthenticationToken(userDetails, null,
                             userDetails.getAuthorities());
                 } else {
+                    // Chỉ xóa token nếu đã hết hạn
                     resetTokenRepository.delete(token);
                 }
             }

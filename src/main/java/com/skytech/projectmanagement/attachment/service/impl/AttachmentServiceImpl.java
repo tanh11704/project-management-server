@@ -27,7 +27,7 @@ public class AttachmentServiceImpl implements AttachmentService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<AttachmentResponse> getAttachmentsForEntity(String entityType, Integer entityId) {
+    public List<AttachmentResponse> getAttachmentsForEntity(String entityType, String entityId) {
 
         List<Attachment> attachments =
                 attachmentRepository.findByEntityTypeAndEntityId(entityType, entityId);
@@ -48,7 +48,7 @@ public class AttachmentServiceImpl implements AttachmentService {
     @Override
     @Transactional
     public AttachmentResponse createAttachment(MultipartFile file, String entityType,
-            Integer entityId, Integer userId) {
+            String entityId, Integer userId) {
 
         validateFile(file);
 
