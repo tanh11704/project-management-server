@@ -32,79 +32,81 @@ import lombok.RequiredArgsConstructor;
 @RequestMapping("/bug-service/v1/bugs")
 @RequiredArgsConstructor
 public class BugController {
-    private final BugService bugService;
-    private final AttachmentService attachmentService;
-    private final UserService userService;
+        private final BugService bugService;
+        private final AttachmentService attachmentService;
+        private final UserService userService;
 
-    @PostMapping
-    @PreAuthorize("hasAuthority('BUG_CREATE')")
-    public ResponseEntity<SuccessResponse<BugResponseDTO>> createBug(
-            @Valid @RequestBody BugRequestDTO dto) { // ← thêm @Valid
+        @PostMapping
+        @PreAuthorize("hasAuthority('BUG_CREATE')")
+        public ResponseEntity<SuccessResponse<BugResponseDTO>> createBug(
+                        @Valid @RequestBody BugRequestDTO dto) { // ← thêm @Valid
 
-        BugResponseDTO bug = bugService.createBug(dto);
-        return ResponseEntity.ok(SuccessResponse.of(bug, "Tạo bug thành công."));
-    }
+                BugResponseDTO bug = bugService.createBug(dto);
+                return ResponseEntity.ok(SuccessResponse.of(bug, "Tạo bug thành công."));
+        }
 
-    @PutMapping("/{id}")
-    @PreAuthorize("hasAuthority('BUG_UPDATE')")
-    public ResponseEntity<SuccessResponse<BugResponseDTO>> updateBug(@PathVariable UUID id,
-            @RequestBody BugRequestDTO dto) {
-        BugResponseDTO updatedBug = bugService.updateBug(id, dto);
-        return ResponseEntity.ok(SuccessResponse.of(updatedBug, "Cập nhật bug thành công."));
-    }
+        @PutMapping("/{id}")
+        @PreAuthorize("hasAuthority('BUG_UPDATE')")
+        public ResponseEntity<SuccessResponse<BugResponseDTO>> updateBug(@PathVariable UUID id,
+                        @RequestBody BugRequestDTO dto) {
+                BugResponseDTO updatedBug = bugService.updateBug(id, dto);
+                return ResponseEntity
+                                .ok(SuccessResponse.of(updatedBug, "Cập nhật bug thành công."));
+        }
 
-    @DeleteMapping("/{id}")
-    @PreAuthorize("hasAuthority('BUG_READ_ALL')")
-    public ResponseEntity<SuccessResponse<Void>> deleteBug(@PathVariable UUID id) {
-        bugService.deleteBug(id);
-        return ResponseEntity.ok(SuccessResponse.of(null, "Xoá bug thành công."));
-    }
+        @DeleteMapping("/{id}")
+        @PreAuthorize("hasAuthority('BUG_READ_ALL')")
+        public ResponseEntity<SuccessResponse<Void>> deleteBug(@PathVariable UUID id) {
+                bugService.deleteBug(id);
+                return ResponseEntity.ok(SuccessResponse.of(null, "Xoá bug thành công."));
+        }
 
-    @GetMapping("/{id}")
-    @PreAuthorize("hasAuthority('BUG_READ_ALL')")
-    public ResponseEntity<SuccessResponse<BugResponseDTO>> getBugById(@PathVariable UUID id) {
-        BugResponseDTO bug = bugService.getBugById(id);
-        return ResponseEntity.ok(SuccessResponse.of(bug, "Lấy thông tin bug thành công."));
-    }
+        @GetMapping("/{id}")
+        @PreAuthorize("hasAuthority('BUG_READ_ALL')")
+        public ResponseEntity<SuccessResponse<BugResponseDTO>> getBugById(@PathVariable UUID id) {
+                BugResponseDTO bug = bugService.getBugById(id);
+                return ResponseEntity.ok(SuccessResponse.of(bug, "Lấy thông tin bug thành công."));
+        }
 
-    @GetMapping("/by-project/{projectId}")
-    @PreAuthorize("hasAuthority('BUG_READ_ALL')")
-    public ResponseEntity<SuccessResponse<List<BugResponseDTO>>> getBugsByProjectId(
-            @PathVariable Integer projectId) {
+        @GetMapping("/by-project/{projectId}")
+        @PreAuthorize("hasAuthority('BUG_READ_ALL')")
+        public ResponseEntity<SuccessResponse<List<BugResponseDTO>>> getBugsByProjectId(
+                        @PathVariable Integer projectId) {
 
-        List<BugResponseDTO> bugs = bugService.getBugsByProjectId(projectId);
-        return ResponseEntity
-                .ok(SuccessResponse.of(bugs, "Lấy danh sách bug của project thành công."));
-    }
+                List<BugResponseDTO> bugs = bugService.getBugsByProjectId(projectId);
+                return ResponseEntity.ok(SuccessResponse.of(bugs,
+                                "Lấy danh sách bug của project thành công."));
+        }
 
-    @PostMapping("/{bugId}/attachments")
-    public ResponseEntity<SuccessResponse<AttachmentResponse>> uploadBugAttachment(
-            @PathVariable UUID bugId, @RequestParam("file") @Valid MultipartFile file) {
+        @PostMapping("/{bugId}/attachments")
+        public ResponseEntity<SuccessResponse<AttachmentResponse>> uploadBugAttachment(
+                        @PathVariable UUID bugId, @RequestParam("file") @Valid MultipartFile file) {
 
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+                Authentication authentication =
+                                SecurityContextHolder.getContext().getAuthentication();
 
-        User currentUser = userService.findUserByEmail(authentication.getName());
-        Integer userId = currentUser.getId();
+                User currentUser = userService.findUserByEmail(authentication.getName());
+                Integer userId = currentUser.getId();
 
-        AttachmentResponse attachmentDto =
-                attachmentService.createAttachment(file, "BUG", bugId, userId);
+                AttachmentResponse attachmentDto =
+                                attachmentService.createAttachment(file, "BUG", bugId, userId);
 
-        SuccessResponse<AttachmentResponse> response =
-                SuccessResponse.of(attachmentDto, "Tải tệp lên thành công.");
+                SuccessResponse<AttachmentResponse> response =
+                                SuccessResponse.of(attachmentDto, "Tải tệp lên thành công.");
 
-        return new ResponseEntity<>(response, HttpStatus.CREATED);
-    }
+                return new ResponseEntity<>(response, HttpStatus.CREATED);
+        }
 
-    @GetMapping("/{bugId}/attachments")
-    public ResponseEntity<SuccessResponse<List<AttachmentResponse>>> getBugAttachments(
-            @PathVariable UUID bugId) {
+        @GetMapping("/{bugId}/attachments")
+        public ResponseEntity<SuccessResponse<List<AttachmentResponse>>> getBugAttachments(
+                        @PathVariable UUID bugId) {
 
-        List<AttachmentResponse> attachments =
-                attachmentService.getAttachmentsForEntity("BUG", bugId);
+                List<AttachmentResponse> attachments =
+                                attachmentService.getAttachmentsForEntity("BUG", bugId);
 
-        SuccessResponse<List<AttachmentResponse>> response =
-                SuccessResponse.of(attachments, "Lấy danh sách tệp đính kèm thành công.");
+                SuccessResponse<List<AttachmentResponse>> response = SuccessResponse.of(attachments,
+                                "Lấy danh sách tệp đính kèm thành công.");
 
-        return ResponseEntity.ok(response);
-    }
+                return ResponseEntity.ok(response);
+        }
 }
