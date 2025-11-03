@@ -8,11 +8,13 @@ import com.skytech.projectmanagement.auth.dto.RefreshTokenRequest;
 import com.skytech.projectmanagement.auth.dto.RefreshTokenResponse;
 import com.skytech.projectmanagement.auth.service.AuthService;
 import com.skytech.projectmanagement.common.dto.SuccessResponse;
+import com.skytech.projectmanagement.common.util.HttpRequestUtils;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
@@ -24,8 +26,11 @@ public class AuthController {
 
     @PostMapping("/login")
     public ResponseEntity<SuccessResponse<LoginResponse>> login(
-            @Valid @RequestBody LoginRequest loginRequest) {
-        LoginResponse loginData = authService.login(loginRequest);
+            @Valid @RequestBody LoginRequest loginRequest, HttpServletRequest httpRequest) {
+        // Lấy IP address từ request (tự động)
+        String ipAddress = HttpRequestUtils.getClientIpAddress(httpRequest);
+
+        LoginResponse loginData = authService.login(loginRequest, ipAddress);
 
         SuccessResponse<LoginResponse> response =
                 SuccessResponse.of(loginData, "Đăng nhập thành công.");
@@ -36,7 +41,7 @@ public class AuthController {
     @PostMapping("/logout")
     public ResponseEntity<SuccessResponse<Object>> logout(
             @Valid @RequestBody LogoutRequest logoutRequest) {
-        authService.logout(logoutRequest.refreshToken());
+        authService.logout(logoutRequest.refreshToken(), logoutRequest.accessToken());
 
         SuccessResponse<Object> response = SuccessResponse.of(null, "Đăng xuất thành công.");
 

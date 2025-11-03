@@ -1,6 +1,7 @@
 package com.skytech.projectmanagement.auth.security;
 
 import java.io.IOException;
+import com.skytech.projectmanagement.auth.service.TokenBlacklistService;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -21,11 +22,18 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtTokenProvider jwtTokenProvider;
     private final UserDetailsService userDetailsService;
+    private final TokenBlacklistService tokenBlacklistService;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
             FilterChain filterChain) throws ServletException, IOException {
         String token = getTokenFromRequest(request);
+
+        // Kiểm tra xem token có bị blacklist không
+        if (StringUtils.hasText(token) && tokenBlacklistService.isTokenBlacklisted(token)) {
+            filterChain.doFilter(request, response);
+            return;
+        }
 
         if (StringUtils.hasText(token) && jwtTokenProvider.validateToken(token)) {
             String email = jwtTokenProvider.getEmail(token);

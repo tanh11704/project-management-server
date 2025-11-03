@@ -1,6 +1,7 @@
 package com.skytech.projectmanagement.user.service.impl;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -55,14 +56,27 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public User findUserByEmail(String email) {
-        return userRepository.findByEmail(email).orElseThrow(() -> new ResourceNotFoundException(
-                "Không tìm thấy người dùng với email: " + email));
+        User user =
+                userRepository.findByEmail(email).orElseThrow(() -> new ResourceNotFoundException(
+                        "Không tìm thấy người dùng với email: " + email));
+
+        if (Boolean.TRUE.equals(user.getIsDeleted())) {
+            throw new ResourceNotFoundException("Không tìm thấy người dùng với email: " + email);
+        }
+
+        return user;
     }
 
     @Override
     public User findUserById(Integer id) {
-        return userRepository.findById(id).orElseThrow(
+        User user = userRepository.findById(id).orElseThrow(
                 () -> new ResourceNotFoundException("Không tìm thấy người dùng với ID: " + id));
+
+        if (Boolean.TRUE.equals(user.getIsDeleted())) {
+            throw new ResourceNotFoundException("Không tìm thấy người dùng với ID: " + id);
+        }
+
+        return user;
     }
 
     @Override
@@ -82,20 +96,16 @@ public class UserServiceImpl implements UserService {
         User currentUser = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy người dùng."));
 
-        // Kiểm tra mật khẩu cũ: có thể là mật khẩu chính hoặc mật khẩu tạm thời
         boolean isOldPasswordValid =
                 passwordEncoder.matches(request.oldPassword(), currentUser.getHashPassword());
 
-        // Nếu không khớp với mật khẩu chính, kiểm tra mật khẩu tạm thời
         if (!isOldPasswordValid) {
             var tempTokenOpt = passwordResetTokenRepository.findByUserId(currentUser.getId());
             if (tempTokenOpt.isPresent()) {
                 PasswordResetToken token = tempTokenOpt.get();
                 if (token.getExpiresAt().isAfter(Instant.now())) {
-                    // Kiểm tra mật khẩu tạm thời
                     if (passwordEncoder.matches(request.oldPassword(), token.getHashToken())) {
                         isOldPasswordValid = true;
-                        // Xóa token tạm thời sau khi xác thực thành công
                         passwordResetTokenRepository.delete(token);
                     }
                 } else {
@@ -104,7 +114,6 @@ public class UserServiceImpl implements UserService {
                 }
             }
         } else {
-            // Nếu dùng mật khẩu chính hợp lệ, cũng xóa token tạm thời nếu có
             passwordResetTokenRepository.deleteByUserId(currentUser.getId());
         }
 
@@ -113,17 +122,14 @@ public class UserServiceImpl implements UserService {
                     "Mật khẩu cũ bạn đã nhập không khớp với mật khẩu hiện tại hoặc mật khẩu tạm thời.");
         }
 
-        // Kiểm tra mật khẩu mới không được trùng với mật khẩu cũ
         if (passwordEncoder.matches(request.newPassword(), currentUser.getHashPassword())) {
             throw new ValidationException(
                     "Mật khẩu mới không được trùng với mật khẩu hiện tại. Vui lòng chọn mật khẩu khác.");
         }
 
-        // Cập nhật mật khẩu mới
         currentUser.setHashPassword(passwordEncoder.encode(request.newPassword()));
         userRepository.save(currentUser);
 
-        // Xóa tất cả refresh tokens để đăng xuất khỏi các thiết bị khác
         userRefreshTokenRepository.deleteByUserId(currentUser.getId());
     }
 
@@ -142,18 +148,26 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public PaginatedResponse<UserResponse> getUsers(Pageable pageable, String search) {
+    public PaginatedResponse<UserResponse> getUsers(Pageable pageable, String search,
+            Boolean includeDeleted) {
         Specification<User> spec = (root, query, cb) -> {
-            if (!StringUtils.hasText(search)) {
-                return cb.conjunction();
+            List<Predicate> predicates = new ArrayList<>();
+
+            // Chỉ lọc các user đã bị xóa nếu includeDeleted = false hoặc null
+            if (!Boolean.TRUE.equals(includeDeleted)) {
+                predicates.add(cb.or(cb.isNull(root.get("isDeleted")),
+                        cb.equal(root.get("isDeleted"), false)));
             }
 
-            Predicate nameLike =
-                    cb.like(cb.lower(root.get("fullName")), "%" + search.toLowerCase() + "%");
-            Predicate emailLike =
-                    cb.like(cb.lower(root.get("email")), "%" + search.toLowerCase() + "%");
+            if (StringUtils.hasText(search)) {
+                Predicate nameLike =
+                        cb.like(cb.lower(root.get("fullName")), "%" + search.toLowerCase() + "%");
+                Predicate emailLike =
+                        cb.like(cb.lower(root.get("email")), "%" + search.toLowerCase() + "%");
+                predicates.add(cb.or(nameLike, emailLike));
+            }
 
-            return cb.or(nameLike, emailLike);
+            return cb.and(predicates.toArray(new Predicate[0]));
         };
 
         Page<User> userPage = userRepository.findAll(spec, pageable);
@@ -166,6 +180,23 @@ public class UserServiceImpl implements UserService {
 
         return PaginatedResponse.of(userDtoList, pagination,
                 "Lấy danh sách người dùng thành công.");
+    }
+
+    @Override
+    @Transactional
+    public void restoreUser(Integer userId) {
+        User userToRestore = userRepository.findById(userId).orElseThrow(
+                () -> new ResourceNotFoundException("Không tìm thấy người dùng với ID: " + userId));
+
+        if (!Boolean.TRUE.equals(userToRestore.getIsDeleted())) {
+            throw new ValidationException("Người dùng này chưa bị xóa, không thể restore.");
+        }
+
+        userToRestore.setIsDeleted(false);
+        userToRestore.setDeletedAt(null);
+        userRepository.save(userToRestore);
+
+        log.info("Đã restore user ID: {}", userId);
     }
 
     @Override
@@ -191,16 +222,29 @@ public class UserServiceImpl implements UserService {
         User user = userRepository.findById(userId).orElseThrow(
                 () -> new ResourceNotFoundException("Không tìm thấy người dùng với ID: " + userId));
 
+        if (Boolean.TRUE.equals(user.getIsDeleted())) {
+            throw new ResourceNotFoundException("Không tìm thấy người dùng với ID: " + userId);
+        }
+
         return createResponseWithAvatarUrl(user);
     }
 
     @Override
+    @Transactional
     public UserResponse updateUser(Integer userId, UpdateUserRequest request) {
         User userToUpdate = userRepository.findById(userId).orElseThrow(
                 () -> new ResourceNotFoundException("Không tìm thấy người dùng với ID: " + userId));
 
+        if (Boolean.TRUE.equals(userToUpdate.getIsDeleted())) {
+            throw new ResourceNotFoundException("Không tìm thấy người dùng với ID: " + userId);
+        }
+
         if (request.fullName() != null) {
             userToUpdate.setFullName(request.fullName());
+        }
+
+        if (request.isAdmin() != null) {
+            userToUpdate.setIsAdmin(request.isAdmin());
         }
 
         User updatedUser = userRepository.save(userToUpdate);
@@ -211,29 +255,40 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional
     public void deleteUser(Integer userId) {
-        if (!userRepository.existsById(userId)) {
-            throw new ResourceNotFoundException("Không tìm thấy người dùng với ID: " + userId);
+        User userToDelete = userRepository.findById(userId).orElseThrow(
+                () -> new ResourceNotFoundException("Không tìm thấy người dùng với ID: " + userId));
+
+        if (Boolean.TRUE.equals(userToDelete.getIsDeleted())) {
+            throw new ValidationException("Người dùng này đã bị xóa trước đó.");
         }
 
-        User userToDelete = userRepository.findById(userId).get();
+        // Soft delete: Đánh dấu user là đã xóa
+        userToDelete.setIsDeleted(true);
+        userToDelete.setDeletedAt(Instant.now());
+        userRepository.save(userToDelete);
 
+        // Xóa avatar file
         String oldObjectName = userToDelete.getAvatar();
         if (oldObjectName != null && !oldObjectName.isBlank()) {
             try {
-                log.info("Attempting to delete old avatar: {}", oldObjectName);
+                log.info("Đang cố gắng xóa avatar cho user đã bị xóa: {}", oldObjectName);
                 fileStorageService.deleteFile(oldObjectName);
             } catch (Exception e) {
-                log.error("Could not delete old avatar '{}': {}", oldObjectName, e.getMessage());
+                log.error("Không thể xóa avatar '{}': {}", oldObjectName, e.getMessage());
             }
         }
 
-        // Kiểm tra xem user có đang là thành viên của project nào không (Module Project)
-        // Xóa user khỏi team (Module Team)
-        // Xóa user khỏi role_permission
-
+        // Xóa refresh tokens để đăng xuất user khỏi tất cả thiết bị
         userRefreshTokenRepository.deleteByUserId(userId);
 
-        userRepository.deleteById(userId);
+        // Xóa password reset tokens nếu có
+        passwordResetTokenRepository.deleteByUserId(userId);
+
+        // Xóa relationships (user roles, user permissions)
+        // Lưu ý: Xóa relationships thông qua repositories riêng biệt nếu cần
+        // Hiện tại để JPA cascade hoặc xử lý ở module khác
+
+        log.info("Đã soft delete user ID: {}", userId);
     }
 
     @Override
@@ -246,10 +301,10 @@ public class UserServiceImpl implements UserService {
         String oldObjectName = currentUser.getAvatar();
         if (oldObjectName != null && !oldObjectName.isBlank()) {
             try {
-                log.info("Attempting to delete old avatar: {}", oldObjectName);
+                log.info("Đang cố gắng xóa avatar cũ: {}", oldObjectName);
                 fileStorageService.deleteFile(oldObjectName);
             } catch (Exception e) {
-                log.error("Could not delete old avatar '{}': {}", oldObjectName, e.getMessage());
+                log.error("Không thể xóa avatar cũ '{}': {}", oldObjectName, e.getMessage());
             }
         }
 
@@ -314,18 +369,18 @@ public class UserServiceImpl implements UserService {
                         .orElseThrow(() -> new ResourceNotFoundException(
                                 "Không tìm thấy người dùng với ID: " + userId));
 
-                // Generate random password (12 characters: uppercase, lowercase, numbers)
+                // Tạo mật khẩu ngẫu nhiên (12 ký tự: chữ hoa, chữ thường, số, ký tự đặc biệt)
                 String newPassword = generateRandomPassword();
                 String encodedPassword = passwordEncoder.encode(newPassword);
 
-                // Update password
+                // Cập nhật mật khẩu
                 user.setHashPassword(encodedPassword);
                 userRepository.save(user);
 
-                // Invalidate all refresh tokens for this user
+                // Vô hiệu hóa tất cả refresh tokens cho user này
                 userRefreshTokenRepository.deleteByUserId(userId);
 
-                // Send email with new password
+                // Gửi email với mật khẩu mới
                 try {
                     emailService.sendNewPasswordEmail(user.getEmail(), user.getFullName(),
                             newPassword);
@@ -334,7 +389,7 @@ public class UserServiceImpl implements UserService {
                 } catch (Exception emailException) {
                     log.error("Đã reset mật khẩu cho user ID {} nhưng không thể gửi email: {}",
                             userId, emailException.getMessage());
-                    // Still count as success since password was reset
+                    // Vẫn tính là thành công vì mật khẩu đã được reset
                 }
 
                 resetUserIds.add(userId);
@@ -360,18 +415,18 @@ public class UserServiceImpl implements UserService {
         java.util.Random random = new java.util.Random();
         StringBuilder password = new StringBuilder(12);
 
-        // Ensure at least one character from each set (uppercase, lowercase, number, special)
+        // Đảm bảo có ít nhất một ký tự từ mỗi tập hợp (chữ hoa, chữ thường, số, ký tự đặc biệt)
         password.append(uppercase.charAt(random.nextInt(uppercase.length())));
         password.append(lowercase.charAt(random.nextInt(lowercase.length())));
         password.append(numbers.charAt(random.nextInt(numbers.length())));
         password.append(specialChars.charAt(random.nextInt(specialChars.length())));
 
-        // Fill the rest randomly (12 - 4 = 8 more characters)
+        // Điền phần còn lại ngẫu nhiên (12 - 4 = 8 ký tự nữa)
         for (int i = 4; i < 12; i++) {
             password.append(allChars.charAt(random.nextInt(allChars.length())));
         }
 
-        // Shuffle the password
+        // Xáo trộn mật khẩu
         char[] passwordArray = password.toString().toCharArray();
         for (int i = passwordArray.length - 1; i > 0; i--) {
             int j = random.nextInt(i + 1);

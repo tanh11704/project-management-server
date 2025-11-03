@@ -2,8 +2,10 @@ package com.skytech.projectmanagement.auth.security;
 
 import java.util.Arrays;
 import java.util.Collections;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.ProviderManager;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
@@ -15,17 +17,22 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-import lombok.RequiredArgsConstructor;
 
-@Configuration
+@Configuration(proxyBeanMethods = false)
 @EnableWebSecurity
 @EnableMethodSecurity
-@RequiredArgsConstructor
 public class SecurityConfig {
 
-    private final JwtAuthenticationFilter jwtAuthenticationFilter;
-    private final JwtAuthenticationEntryPoint unauthorizedHandler;
-    private final CustomAuthenticationProvider customAuthenticationProvider;
+    @Lazy
+    @Autowired
+    private JwtAuthenticationFilter jwtAuthenticationFilter;
+
+    @Lazy
+    @Autowired
+    private JwtAuthenticationEntryPoint unauthorizedHandler;
+
+    @Autowired
+    private CustomAuthenticationProvider customAuthenticationProvider;
 
     @Bean
     public AuthenticationManager authenticationManager() {

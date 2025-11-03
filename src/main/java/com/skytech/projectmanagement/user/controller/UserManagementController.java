@@ -84,7 +84,8 @@ public class UserManagementController {
             @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "10") int size,
             @RequestParam(required = false) String search,
             @RequestParam(defaultValue = "createdAt") String sortBy,
-            @RequestParam(defaultValue = "desc") String sortOrder) {
+            @RequestParam(defaultValue = "desc") String sortOrder,
+            @RequestParam(required = false) Boolean includeDeleted) {
 
         Sort sort = Sort.by(
                 sortOrder.equalsIgnoreCase("asc") ? Sort.Direction.ASC : Sort.Direction.DESC,
@@ -92,8 +93,22 @@ public class UserManagementController {
 
         Pageable pageable = PageRequest.of(page, size, sort);
 
-        PaginatedResponse<UserResponse> paginatedData = userService.getUsers(pageable, search);
+        PaginatedResponse<UserResponse> paginatedData =
+                userService.getUsers(pageable, search, includeDeleted);
 
         return ResponseEntity.ok(paginatedData);
+    }
+
+    @PatchMapping("/{userId}/restore")
+    @PreAuthorize("hasAuthority('USER_UPDATE')")
+    public ResponseEntity<SuccessResponse<UserResponse>> restoreUser(@PathVariable Integer userId) {
+        userService.restoreUser(userId);
+
+        UserResponse restoredUser = userService.getUserById(userId);
+
+        SuccessResponse<UserResponse> response =
+                SuccessResponse.of(restoredUser, "Khôi phục người dùng thành công.");
+
+        return ResponseEntity.ok(response);
     }
 }

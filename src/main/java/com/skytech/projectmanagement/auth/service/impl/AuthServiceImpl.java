@@ -12,6 +12,7 @@ import com.skytech.projectmanagement.auth.repository.PermissionRepository;
 import com.skytech.projectmanagement.auth.security.JwtTokenProvider;
 import com.skytech.projectmanagement.auth.service.AuthService;
 import com.skytech.projectmanagement.auth.service.PermissionService;
+import com.skytech.projectmanagement.auth.service.TokenBlacklistService;
 import com.skytech.projectmanagement.common.exception.ResourceNotFoundException;
 import com.skytech.projectmanagement.common.mail.EmailService;
 import com.skytech.projectmanagement.user.entity.User;
@@ -40,6 +41,7 @@ public class AuthServiceImpl implements AuthService {
     private final EmailService emailService;
     private final PermissionRepository permissionRepository;
     private final PermissionService permissionService;
+    private final TokenBlacklistService tokenBlacklistService;
     private final long jwtExpirationMs;
 
     public AuthServiceImpl(AuthenticationManager authenticationManager,
@@ -47,6 +49,7 @@ public class AuthServiceImpl implements AuthService {
             RefreshTokenService refreshTokenService,
             PasswordResetTokenService passwordResetTokenService, EmailService emailService,
             PermissionRepository permissionRepository, PermissionService permissionService,
+            TokenBlacklistService tokenBlacklistService,
             @Value("${jwt.expiration-ms}") long jwtExpirationMs) {
         this.authenticationManager = authenticationManager;
         this.jwtTokenProvider = jwtTokenProvider;
@@ -56,12 +59,13 @@ public class AuthServiceImpl implements AuthService {
         this.emailService = emailService;
         this.permissionRepository = permissionRepository;
         this.permissionService = permissionService;
+        this.tokenBlacklistService = tokenBlacklistService;
         this.jwtExpirationMs = jwtExpirationMs;
     }
 
     @Override
     @Transactional
-    public LoginResponse login(LoginRequest loginRequest) {
+    public LoginResponse login(LoginRequest loginRequest, String ipAddress) {
         Authentication authentication =
                 authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(
                         loginRequest.email(), loginRequest.password()));
@@ -74,15 +78,14 @@ public class AuthServiceImpl implements AuthService {
         User user = userService.findUserByEmail(loginRequest.email());
 
         refreshTokenService.saveRefreshToken(user.getId(), refreshToken,
-                jwtTokenProvider.getExpirationDateFromToken(refreshToken).toInstant(),
-                loginRequest.deviceInfo());
+                jwtTokenProvider.getExpirationDateFromToken(refreshToken).toInstant(), ipAddress);
 
-        // Build permission tree
+        // Xây dựng cây phân quyền
         Set<String> userPermissionNames;
         if (Boolean.TRUE.equals(user.getIsAdmin())) {
             userPermissionNames = permissionRepository.findAllPermissionNames();
         } else {
-            // Get only leaf permissions stored in database
+            // Chỉ lấy các leaf permissions được lưu trong database
             userPermissionNames = permissionRepository.findLeafPermissionsByUserId(user.getId());
         }
 
@@ -96,8 +99,21 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
-    public void logout(String refreshToken) {
+    @Transactional
+    public void logout(String refreshToken, String accessToken) {
+        // Xóa refresh token
         refreshTokenService.deleteRefreshToken(refreshToken);
+
+        // Blacklist access token để không thể sử dụng lại
+        if (jwtTokenProvider.validateToken(accessToken)) {
+            try {
+                java.util.Date expirationDate =
+                        jwtTokenProvider.getExpirationDateFromToken(accessToken);
+                tokenBlacklistService.blacklistToken(accessToken, expirationDate.toInstant());
+            } catch (Exception e) {
+                log.warn("Không thể lấy expiration date từ access token: {}", e.getMessage());
+            }
+        }
     }
 
     @Override
@@ -116,7 +132,7 @@ public class AuthServiceImpl implements AuthService {
 
         refreshTokenService.saveRefreshToken(user.getId(), newRefreshToken,
                 jwtTokenProvider.getExpirationDateFromToken(newRefreshToken).toInstant(),
-                tokenEntity.getDeviceInfo());
+                tokenEntity.getIpAddress());
 
         return new RefreshTokenResponse(newAccessToken, newRefreshToken, jwtExpirationMs / 1000);
     }

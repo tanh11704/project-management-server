@@ -42,8 +42,17 @@ public class User {
     @Column(name = "is_admin")
     private Boolean isAdmin;
 
+    @Column(name = "is_deleted")
+    private Boolean isDeleted;
+
+    @Column(name = "deleted_at")
+    private Instant deletedAt;
+
     @PrePersist
     protected void onCreate() {
         this.createdAt = Instant.now();
+        if (this.isDeleted == null) {
+            this.isDeleted = false;
+        }
     }
 }

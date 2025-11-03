@@ -21,12 +21,12 @@ public class RefreshTokenServiceImpl implements RefreshTokenService {
     @Override
     @Transactional
     public void saveRefreshToken(Integer userId, String refreshToken, Instant expiryDate,
-            String deviceInfo) {
+            String ipAddress) {
         UserRefreshToken userRefreshToken = new UserRefreshToken();
         userRefreshToken.setUserId(userId);
         userRefreshToken.setRefreshToken(refreshToken);
         userRefreshToken.setExpiresAt(expiryDate);
-        userRefreshToken.setDeviceInfo(deviceInfo);
+        userRefreshToken.setIpAddress(ipAddress);
 
         tokenRepository.save(userRefreshToken);
     }

@@ -31,7 +31,10 @@ public interface UserService {
 
     UserResponse createUser(CreateUserRequest request);
 
-    PaginatedResponse<UserResponse> getUsers(Pageable pageable, String search);
+    PaginatedResponse<UserResponse> getUsers(Pageable pageable, String search,
+            Boolean includeDeleted);
+
+    void restoreUser(Integer userId);
 
     UserResponse getUserProfile(String email);
 

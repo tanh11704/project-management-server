@@ -3,10 +3,8 @@ package com.skytech.projectmanagement.Bug.Mapper;
 import com.skytech.projectmanagement.Bug.dto.BugRequestDTO;
 import com.skytech.projectmanagement.Bug.dto.BugResponseDTO;
 import com.skytech.projectmanagement.Bug.entity.Bug;
-import com.skytech.projectmanagement.project.entity.Project;
-import com.skytech.projectmanagement.tasks.entity.Tasks;
-import com.skytech.projectmanagement.user.entity.User;
-import org.mapstruct.*;
+import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
 
 @Mapper(componentModel = "spring")
 public interface BugMapper {
@@ -20,7 +18,8 @@ public interface BugMapper {
     Bug toEntity(BugRequestDTO dto);
 
     default BugResponseDTO toResponseDto(Bug bug) {
-        if (bug == null) return null;
+        if (bug == null)
+            return null;
 
         BugResponseDTO dto = new BugResponseDTO();
         dto.setId(bug.getId());
