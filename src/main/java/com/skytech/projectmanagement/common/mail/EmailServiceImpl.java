@@ -2,6 +2,7 @@ package com.skytech.projectmanagement.common.mail;
 
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
@@ -16,6 +17,7 @@ public class EmailServiceImpl implements EmailService {
     private final JavaMailSender mailSender;
 
     @Override
+    @Async
     public void sendPasswordResetEmail(String toEmail, String token) {
         try {
             MimeMessage message = mailSender.createMimeMessage();
@@ -35,6 +37,7 @@ public class EmailServiceImpl implements EmailService {
     }
 
     @Override
+    @Async
     public void sendNewPasswordEmail(String toEmail, String userName, String newPassword) {
         try {
             MimeMessage message = mailSender.createMimeMessage();
@@ -89,7 +92,7 @@ public class EmailServiceImpl implements EmailService {
                                             <!-- Password Box -->
                                             <div style="background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); border-left: 4px solid #667eea; padding: 20px; margin: 30px 0; border-radius: 8px;">
                                                 <p style="margin: 0 0 10px; color: #555555; font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Mật khẩu tạm thời:</p>
-                                                <p style="margin: 0; color: #333333; font-size: 24px; font-weight: 700; font-family: 'Courier New', monospace; letter-spacing: 2px; word-break: break-all;">%s</p>
+                                                <p style="margin: 0; color: #333333; font-size: 24px; font-weight: 700; font-family: 'Courier New', monospace; letter-spacing: 2px; word-break: break-all;">{TOKEN}</p>
                                             </div>
 
                                             <div style="background-color: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 20px 0; border-radius: 6px;">
@@ -123,7 +126,7 @@ public class EmailServiceImpl implements EmailService {
                 </body>
                 </html>
                 """
-                .formatted(token);
+                .replace("{TOKEN}", token);
     }
 
     private String buildNewPasswordEmailTemplate(String userName, String newPassword) {
@@ -152,7 +155,7 @@ public class EmailServiceImpl implements EmailService {
                                     <tr>
                                         <td style="padding: 40px;">
                                             <p style="margin: 0 0 20px; color: #333333; font-size: 18px; line-height: 1.6;">
-                                                Xin chào <strong style="color: #11998e;">%s</strong>,
+                                                Xin chào <strong style="color: #11998e;">{USER_NAME}</strong>,
                                             </p>
                                             <p style="margin: 0 0 25px; color: #333333; font-size: 16px; line-height: 1.6;">
                                                 Quản trị viên đã reset mật khẩu cho tài khoản của bạn. Dưới đây là mật khẩu mới của bạn:
@@ -161,7 +164,7 @@ public class EmailServiceImpl implements EmailService {
                                             <!-- Password Box -->
                                             <div style="background: linear-gradient(135deg, #11998e 0%%, #38ef7d 100%%); padding: 25px; margin: 30px 0; border-radius: 10px; text-align: center; box-shadow: 0 2px 8px rgba(17, 153, 142, 0.3);">
                                                 <p style="margin: 0 0 10px; color: #ffffff; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; opacity: 0.9;">Mật khẩu mới của bạn:</p>
-                                                <p style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 700; font-family: 'Courier New', monospace; letter-spacing: 3px; word-break: break-all; text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);">%s</p>
+                                                <p style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 700; font-family: 'Courier New', monospace; letter-spacing: 3px; word-break: break-all; text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);">{PASSWORD}</p>
                                             </div>
 
                                             <!-- Security Notice -->
@@ -211,7 +214,8 @@ public class EmailServiceImpl implements EmailService {
                 </body>
                 </html>
                 """
-                .formatted(userName, newPassword);
+                .replace("{USER_NAME}", userName != null ? userName : "Người dùng")
+                .replace("{PASSWORD}", newPassword);
     }
 
 }

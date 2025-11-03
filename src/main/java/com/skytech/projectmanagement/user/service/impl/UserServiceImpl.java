@@ -14,6 +14,7 @@ import com.skytech.projectmanagement.common.exception.FileStorageException;
 import com.skytech.projectmanagement.common.exception.InvalidOldPasswordException;
 import com.skytech.projectmanagement.common.exception.ResourceNotFoundException;
 import com.skytech.projectmanagement.common.exception.UserNotFoundInRequestException;
+import com.skytech.projectmanagement.common.exception.ValidationException;
 import com.skytech.projectmanagement.common.mail.EmailService;
 import com.skytech.projectmanagement.filestorage.service.FileStorageService;
 import com.skytech.projectmanagement.user.dto.ChangePasswordRequest;
@@ -110,6 +111,12 @@ public class UserServiceImpl implements UserService {
         if (!isOldPasswordValid) {
             throw new InvalidOldPasswordException(
                     "Mật khẩu cũ bạn đã nhập không khớp với mật khẩu hiện tại hoặc mật khẩu tạm thời.");
+        }
+
+        // Kiểm tra mật khẩu mới không được trùng với mật khẩu cũ
+        if (passwordEncoder.matches(request.newPassword(), currentUser.getHashPassword())) {
+            throw new ValidationException(
+                    "Mật khẩu mới không được trùng với mật khẩu hiện tại. Vui lòng chọn mật khẩu khác.");
         }
 
         // Cập nhật mật khẩu mới
@@ -346,18 +353,21 @@ public class UserServiceImpl implements UserService {
         String uppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
         String lowercase = "abcdefghijklmnopqrstuvwxyz";
         String numbers = "0123456789";
-        String allChars = uppercase + lowercase + numbers;
+        // Ký tự đặc biệt an toàn cho mật khẩu
+        String specialChars = "@$!%*?&#^()_+-=[]{};':\",./<>?|\\~`";
+        String allChars = uppercase + lowercase + numbers + specialChars;
 
         java.util.Random random = new java.util.Random();
         StringBuilder password = new StringBuilder(12);
 
-        // Ensure at least one character from each set
+        // Ensure at least one character from each set (uppercase, lowercase, number, special)
         password.append(uppercase.charAt(random.nextInt(uppercase.length())));
         password.append(lowercase.charAt(random.nextInt(lowercase.length())));
         password.append(numbers.charAt(random.nextInt(numbers.length())));
+        password.append(specialChars.charAt(random.nextInt(specialChars.length())));
 
-        // Fill the rest randomly
-        for (int i = 3; i < 12; i++) {
+        // Fill the rest randomly (12 - 4 = 8 more characters)
+        for (int i = 4; i < 12; i++) {
             password.append(allChars.charAt(random.nextInt(allChars.length())));
         }
 

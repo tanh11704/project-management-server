@@ -12,6 +12,7 @@ import com.skytech.projectmanagement.auth.repository.PermissionRepository;
 import com.skytech.projectmanagement.auth.security.JwtTokenProvider;
 import com.skytech.projectmanagement.auth.service.AuthService;
 import com.skytech.projectmanagement.auth.service.PermissionService;
+import com.skytech.projectmanagement.common.exception.ResourceNotFoundException;
 import com.skytech.projectmanagement.common.mail.EmailService;
 import com.skytech.projectmanagement.user.entity.User;
 import com.skytech.projectmanagement.user.entity.UserRefreshToken;
@@ -129,10 +130,14 @@ public class AuthServiceImpl implements AuthService {
 
             emailService.sendPasswordResetEmail(user.getEmail(), rawTempPassword);
 
+            log.info("Đã tạo token reset password và gửi email cho: {}", email);
+        } catch (ResourceNotFoundException e) {
+            // Email không tồn tại - không log để tránh spam log
+            log.debug("Email '{}' không tồn tại trong hệ thống", email);
         } catch (Exception e) {
-            log.warn(
-                    "Yêu cầu reset password cho email '{}' thất bại hoặc email không tồn tại. Lỗi: {}",
-                    email, e.getMessage());
+            // Log đầy đủ exception để debug
+            log.error("Yêu cầu reset password cho email '{}' thất bại. Lỗi: {}", email,
+                    e.getMessage(), e);
         }
     }
 
