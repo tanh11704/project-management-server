@@ -9,4 +9,6 @@ public interface UserRoleRepository extends JpaRepository<UserRole, UserRoleId> 
 
     @Transactional
     void deleteById_UserId(Integer userId);
+
+    long countById_RoleId(Integer roleId);
 }

@@ -31,3 +31,7 @@ build/
 
 ### VS Code ###
 .vscode/
+build-and-push.sh
+build-docker.sh
+DOCKER-BUILD.md
+SWAGGER-GUIDE.md

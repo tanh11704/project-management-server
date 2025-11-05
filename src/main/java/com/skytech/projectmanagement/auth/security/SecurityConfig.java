@@ -67,15 +67,14 @@ public class SecurityConfig {
         return http.build();
     }
 
-    @Value("${cors.allowed-origins:http://localhost:5173,http://localhost:3000,http://localhost:5174}")
+    @Value("${cors.allowed-origins}")
     private String allowedOrigins;
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
 
-        // Parse allowed origins from comma-separated string
-        List<String> origins = Arrays.asList(allowedOrigins.split(","));
+        List<String> origins = Arrays.stream(allowedOrigins.split(",")).map(String::trim).toList();
         configuration.setAllowedOrigins(origins);
 
         configuration.setAllowedMethods(
@@ -85,7 +84,6 @@ public class SecurityConfig {
 
         configuration.setAllowCredentials(true);
 
-        // Expose headers that frontend might need
         configuration.setExposedHeaders(Arrays.asList("Authorization", "Content-Type"));
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();

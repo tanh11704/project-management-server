@@ -8,6 +8,7 @@ import com.skytech.projectmanagement.auth.dto.PermissionResponse;
 import com.skytech.projectmanagement.auth.dto.RoleResponse;
 import com.skytech.projectmanagement.auth.dto.SyncRolePermissionsRequest;
 import com.skytech.projectmanagement.auth.dto.SyncUserPermissionsRequest;
+import com.skytech.projectmanagement.auth.dto.UpdateRoleRequest;
 import com.skytech.projectmanagement.auth.dto.UpdateUserRolesRequest;
 import com.skytech.projectmanagement.auth.entity.Permission;
 import com.skytech.projectmanagement.auth.entity.Role;
@@ -24,6 +25,7 @@ import com.skytech.projectmanagement.auth.repository.UserPermissionRepository;
 import com.skytech.projectmanagement.auth.repository.UserRoleRepository;
 import com.skytech.projectmanagement.auth.service.PermissionService;
 import com.skytech.projectmanagement.auth.service.RoleService;
+import com.skytech.projectmanagement.common.exception.DeleteConflictException;
 import com.skytech.projectmanagement.common.exception.ResourceNotFoundException;
 import com.skytech.projectmanagement.common.exception.RoleNameExistsException;
 import com.skytech.projectmanagement.common.exception.ValidationException;
@@ -160,6 +162,49 @@ public class RoleServiceImpl implements RoleService {
         Role savedRole = roleRepository.save(newRole);
 
         return RoleResponse.fromEntity(savedRole);
+    }
+
+    @Override
+    @Transactional
+    public RoleResponse updateRole(Integer roleId, UpdateRoleRequest request) {
+
+        Role role = roleRepository.findById(roleId).orElseThrow(
+                () -> new ResourceNotFoundException("Không tìm thấy vai trò với ID: " + roleId));
+
+        // Kiểm tra nếu tên mới khác với tên hiện tại và đã tồn tại
+        if (!role.getName().equalsIgnoreCase(request.name())
+                && roleRepository.existsByNameIgnoreCase(request.name())) {
+            throw new RoleNameExistsException(
+                    "Tên vai trò '" + request.name() + "' đã được sử dụng.");
+        }
+
+        role.setName(request.name().toUpperCase());
+        role.setDescription(request.description());
+
+        Role updatedRole = roleRepository.save(role);
+
+        return RoleResponse.fromEntity(updatedRole);
+    }
+
+    @Override
+    @Transactional
+    public void deleteRole(Integer roleId) {
+
+        Role role = roleRepository.findById(roleId).orElseThrow(
+                () -> new ResourceNotFoundException("Không tìm thấy vai trò với ID: " + roleId));
+
+        // Kiểm tra xem role có đang được sử dụng bởi user nào không
+        long userCount = userRoleRepository.countById_RoleId(roleId);
+        if (userCount > 0) {
+            throw new DeleteConflictException("Không thể xóa vai trò '" + role.getName()
+                    + "' vì đang được sử dụng bởi " + userCount + " người dùng.");
+        }
+
+        // Xóa tất cả permissions liên quan đến role
+        rolePermissionRepository.deleteById_RoleId(roleId);
+
+        // Xóa role
+        roleRepository.delete(role);
     }
 
     @Override
