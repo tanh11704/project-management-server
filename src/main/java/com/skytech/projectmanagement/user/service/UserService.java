@@ -8,6 +8,7 @@ import com.skytech.projectmanagement.user.dto.CreateUserRequest;
 import com.skytech.projectmanagement.user.dto.ResetPasswordsRequest;
 import com.skytech.projectmanagement.user.dto.ResetPasswordsResponse;
 import com.skytech.projectmanagement.user.dto.UpdateUserRequest;
+import com.skytech.projectmanagement.user.dto.UserProfileResponse;
 import com.skytech.projectmanagement.user.dto.UserResponse;
 import com.skytech.projectmanagement.user.entity.User;
 import org.springframework.data.domain.Pageable;
@@ -37,6 +38,8 @@ public interface UserService {
     void restoreUser(Integer userId);
 
     UserResponse getUserProfile(String email);
+
+    UserProfileResponse getUserProfileWithPermissions(String email);
 
     User findUserByEmail(String email);
 

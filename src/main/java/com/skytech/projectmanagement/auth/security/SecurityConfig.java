@@ -2,7 +2,9 @@ package com.skytech.projectmanagement.auth.security;
 
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Lazy;
@@ -46,21 +48,35 @@ public class SecurityConfig {
                 .sessionManagement(
                         session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(authorize -> authorize
+                        // Swagger/OpenAPI endpoints
+                        .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**",
+                                "/swagger-resources/**", "/webjars/**")
+                        .permitAll()
+                        // Public auth endpoints
                         .requestMatchers("/auth-service/v1/login").permitAll()
                         .requestMatchers("/auth-service/v1/logout").permitAll()
                         .requestMatchers("/auth-service/v1/refresh").permitAll()
                         .requestMatchers("/auth-service/v1/forgot-password").permitAll()
-                        .requestMatchers("/ws/**").permitAll().anyRequest().authenticated());
+                        // WebSocket
+                        .requestMatchers("/ws/**").permitAll()
+                        // All other requests require authentication
+                        .anyRequest().authenticated());
 
         http.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
 
+    @Value("${cors.allowed-origins:http://localhost:5173,http://localhost:3000,http://localhost:5174}")
+    private String allowedOrigins;
+
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOriginPatterns(Arrays.asList("*"));
+
+        // Parse allowed origins from comma-separated string
+        List<String> origins = Arrays.asList(allowedOrigins.split(","));
+        configuration.setAllowedOrigins(origins);
 
         configuration.setAllowedMethods(
                 Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
@@ -69,8 +85,10 @@ public class SecurityConfig {
 
         configuration.setAllowCredentials(true);
 
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        // Expose headers that frontend might need
+        configuration.setExposedHeaders(Arrays.asList("Authorization", "Content-Type"));
 
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
 
         return source;

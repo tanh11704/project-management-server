@@ -1,17 +1,12 @@
 package com.skytech.projectmanagement.auth.service.impl;
 
-import java.util.List;
-import java.util.Set;
 import com.skytech.projectmanagement.auth.dto.LoginRequest;
 import com.skytech.projectmanagement.auth.dto.LoginResponse;
-import com.skytech.projectmanagement.auth.dto.PermissionTreeNode;
 import com.skytech.projectmanagement.auth.dto.RefreshTokenRequest;
 import com.skytech.projectmanagement.auth.dto.RefreshTokenResponse;
 import com.skytech.projectmanagement.auth.dto.UserLoginResponse;
-import com.skytech.projectmanagement.auth.repository.PermissionRepository;
 import com.skytech.projectmanagement.auth.security.JwtTokenProvider;
 import com.skytech.projectmanagement.auth.service.AuthService;
-import com.skytech.projectmanagement.auth.service.PermissionService;
 import com.skytech.projectmanagement.auth.service.TokenBlacklistService;
 import com.skytech.projectmanagement.common.exception.ResourceNotFoundException;
 import com.skytech.projectmanagement.common.mail.EmailService;
@@ -39,8 +34,6 @@ public class AuthServiceImpl implements AuthService {
     private final RefreshTokenService refreshTokenService;
     private final PasswordResetTokenService passwordResetTokenService;
     private final EmailService emailService;
-    private final PermissionRepository permissionRepository;
-    private final PermissionService permissionService;
     private final TokenBlacklistService tokenBlacklistService;
     private final long jwtExpirationMs;
 
@@ -48,7 +41,6 @@ public class AuthServiceImpl implements AuthService {
             JwtTokenProvider jwtTokenProvider, UserService userService,
             RefreshTokenService refreshTokenService,
             PasswordResetTokenService passwordResetTokenService, EmailService emailService,
-            PermissionRepository permissionRepository, PermissionService permissionService,
             TokenBlacklistService tokenBlacklistService,
             @Value("${jwt.expiration-ms}") long jwtExpirationMs) {
         this.authenticationManager = authenticationManager;
@@ -57,8 +49,6 @@ public class AuthServiceImpl implements AuthService {
         this.refreshTokenService = refreshTokenService;
         this.passwordResetTokenService = passwordResetTokenService;
         this.emailService = emailService;
-        this.permissionRepository = permissionRepository;
-        this.permissionService = permissionService;
         this.tokenBlacklistService = tokenBlacklistService;
         this.jwtExpirationMs = jwtExpirationMs;
     }
@@ -80,20 +70,8 @@ public class AuthServiceImpl implements AuthService {
         refreshTokenService.saveRefreshToken(user.getId(), refreshToken,
                 jwtTokenProvider.getExpirationDateFromToken(refreshToken).toInstant(), ipAddress);
 
-        // Xây dựng cây phân quyền
-        Set<String> userPermissionNames;
-        if (Boolean.TRUE.equals(user.getIsAdmin())) {
-            userPermissionNames = permissionRepository.findAllPermissionNames();
-        } else {
-            // Chỉ lấy các leaf permissions được lưu trong database
-            userPermissionNames = permissionRepository.findLeafPermissionsByUserId(user.getId());
-        }
-
-        List<PermissionTreeNode> permissionTree =
-                permissionService.buildPermissionTree(userPermissionNames);
-
         UserLoginResponse userResponse = new UserLoginResponse(user.getId(), user.getFullName(),
-                user.getEmail(), user.getAvatar(), permissionTree);
+                user.getEmail(), user.getAvatar());
 
         return new LoginResponse(userResponse, accessToken, refreshToken, jwtExpirationMs / 1000);
     }

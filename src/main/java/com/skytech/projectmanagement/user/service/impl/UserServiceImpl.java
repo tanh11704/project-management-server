@@ -8,6 +8,9 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import com.skytech.projectmanagement.auth.dto.PermissionTreeNode;
+import com.skytech.projectmanagement.auth.repository.PermissionRepository;
+import com.skytech.projectmanagement.auth.service.PermissionService;
 import com.skytech.projectmanagement.common.dto.PaginatedResponse;
 import com.skytech.projectmanagement.common.dto.Pagination;
 import com.skytech.projectmanagement.common.exception.EmailExistsException;
@@ -23,6 +26,7 @@ import com.skytech.projectmanagement.user.dto.CreateUserRequest;
 import com.skytech.projectmanagement.user.dto.ResetPasswordsRequest;
 import com.skytech.projectmanagement.user.dto.ResetPasswordsResponse;
 import com.skytech.projectmanagement.user.dto.UpdateUserRequest;
+import com.skytech.projectmanagement.user.dto.UserProfileResponse;
 import com.skytech.projectmanagement.user.dto.UserResponse;
 import com.skytech.projectmanagement.user.entity.PasswordResetToken;
 import com.skytech.projectmanagement.user.entity.User;
@@ -53,6 +57,8 @@ public class UserServiceImpl implements UserService {
     private final PasswordEncoder passwordEncoder;
     private final FileStorageService fileStorageService;
     private final EmailService emailService;
+    private final PermissionRepository permissionRepository;
+    private final PermissionService permissionService;
 
     @Override
     public User findUserByEmail(String email) {
@@ -145,6 +151,28 @@ public class UserServiceImpl implements UserService {
         User user = findUserByEmail(email);
 
         return createResponseWithAvatarUrl(user);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public UserProfileResponse getUserProfileWithPermissions(String email) {
+        User user = findUserByEmail(email);
+
+        UserResponse userResponse = createResponseWithAvatarUrl(user);
+
+        // Xây dựng cây phân quyền
+        Set<String> userPermissionNames;
+        if (Boolean.TRUE.equals(user.getIsAdmin())) {
+            userPermissionNames = permissionRepository.findAllPermissionNames();
+        } else {
+            // Chỉ lấy các leaf permissions được lưu trong database
+            userPermissionNames = permissionRepository.findLeafPermissionsByUserId(user.getId());
+        }
+
+        List<PermissionTreeNode> permissionTree =
+                permissionService.buildPermissionTree(userPermissionNames);
+
+        return new UserProfileResponse(userResponse, permissionTree);
     }
 
     @Override

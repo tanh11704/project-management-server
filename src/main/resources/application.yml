@@ -4,7 +4,7 @@ spring:
   datasource:
     url: jdbc:postgresql://localhost:5432/project_management
     username: postgres
-    password: 123456
+    password: 12345
   jpa:
     hibernate:
       ddl-auto: update
@@ -12,7 +12,6 @@ spring:
     properties:
       hibernate:
         format_sql: true
-        dialect: org.hibernate.dialect.PostgreSQLDialect
   servlet:
     multipart:
       max-file-size: 10MB
@@ -38,10 +37,39 @@ cloudinary:
 jwt:
   secret-key: daf66e01593f61a15b857cf433aae03a005812b31234e149036bcc8dee755dbb
   expiration-ms: 900000 # 15 minutes
-  refresh-expiration-ms: 86400000 # 7 days
+  refresh-expiration-ms: 86400000 # 1 day
 
 seeder:
   admin:
     email: admin@gmail.com
     password: 123456
 
+cors:
+  allowed-origins: http://localhost:5173,http://localhost:3000,http://localhost:5174
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+    enabled: true
+  swagger-ui:
+    path: /swagger-ui.html
+    enabled: true
+    # Sắp xếp operations theo HTTP method (GET, POST, PUT, DELETE...)
+    operations-sorter: method
+    # Sắp xếp tags theo thứ tự alphabet
+    tags-sorter: alpha
+    # Không mở rộng operations mặc định (none, list, full)
+    doc-expansion: none
+    # Hiển thị thời gian xử lý request
+    display-request-duration: true
+    # Bật tính năng lọc API
+    filter: true
+    # Hiển thị URL của API
+    show-url: true
+    # Hiển thị thông tin về request headers
+    show-request-headers: true
+  # Tắt hiển thị actuator endpoints
+  show-actuator: false
+  # Cấu hình mặc định cho tất cả các paths
+  default-consumes-media-type: application/json
+  default-produces-media-type: application/json
