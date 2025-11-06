@@ -71,4 +71,3 @@ springdoc:
   # Cấu hình mặc định cho tất cả các paths
   default-consumes-media-type: application/json
   default-produces-media-type: application/json
-    password: 123456

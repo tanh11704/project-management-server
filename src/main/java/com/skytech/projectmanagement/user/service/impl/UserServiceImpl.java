@@ -1,10 +1,7 @@
 package com.skytech.projectmanagement.user.service.impl;
 
 import java.time.Instant;
-<<<<<<< HEAD
 import java.util.ArrayList;
-=======
->>>>>>> 5ee0ca2 (Enhance BugController with attachment management features, including endpoints for uploading and retrieving bug attachments. Update Attachment entity and service to support String entityId for improved flexibility. Refactor related methods for backward compatibility.)
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -105,31 +102,18 @@ public class UserServiceImpl implements UserService {
         User currentUser = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy người dùng."));
 
-<<<<<<< HEAD
-        boolean isOldPasswordValid =
-                passwordEncoder.matches(request.oldPassword(), currentUser.getHashPassword());
-
-=======
         // Kiểm tra mật khẩu cũ: có thể là mật khẩu chính hoặc mật khẩu tạm thời
         boolean isOldPasswordValid =
                 passwordEncoder.matches(request.oldPassword(), currentUser.getHashPassword());
 
         // Nếu không khớp với mật khẩu chính, kiểm tra mật khẩu tạm thời
->>>>>>> 5ee0ca2 (Enhance BugController with attachment management features, including endpoints for uploading and retrieving bug attachments. Update Attachment entity and service to support String entityId for improved flexibility. Refactor related methods for backward compatibility.)
         if (!isOldPasswordValid) {
             var tempTokenOpt = passwordResetTokenRepository.findByUserId(currentUser.getId());
             if (tempTokenOpt.isPresent()) {
                 PasswordResetToken token = tempTokenOpt.get();
                 if (token.getExpiresAt().isAfter(Instant.now())) {
-<<<<<<< HEAD
                     if (passwordEncoder.matches(request.oldPassword(), token.getHashToken())) {
                         isOldPasswordValid = true;
-=======
-                    // Kiểm tra mật khẩu tạm thời
-                    if (passwordEncoder.matches(request.oldPassword(), token.getHashToken())) {
-                        isOldPasswordValid = true;
-                        // Xóa token tạm thời sau khi xác thực thành công
->>>>>>> 5ee0ca2 (Enhance BugController with attachment management features, including endpoints for uploading and retrieving bug attachments. Update Attachment entity and service to support String entityId for improved flexibility. Refactor related methods for backward compatibility.)
                         passwordResetTokenRepository.delete(token);
                     }
                 } else {
@@ -138,7 +122,6 @@ public class UserServiceImpl implements UserService {
                 }
             }
         } else {
-<<<<<<< HEAD
             passwordResetTokenRepository.deleteByUserId(currentUser.getId());
         }
 
@@ -155,22 +138,6 @@ public class UserServiceImpl implements UserService {
         currentUser.setHashPassword(passwordEncoder.encode(request.newPassword()));
         userRepository.save(currentUser);
 
-=======
-            // Nếu dùng mật khẩu chính hợp lệ, cũng xóa token tạm thời nếu có
-            passwordResetTokenRepository.deleteByUserId(currentUser.getId());
-        }
-
-        if (!isOldPasswordValid) {
-            throw new InvalidOldPasswordException(
-                    "Mật khẩu cũ bạn đã nhập không khớp với mật khẩu hiện tại hoặc mật khẩu tạm thời.");
-        }
-
-        // Cập nhật mật khẩu mới
-        currentUser.setHashPassword(passwordEncoder.encode(request.newPassword()));
-        userRepository.save(currentUser);
-
-        // Xóa tất cả refresh tokens để đăng xuất khỏi các thiết bị khác
->>>>>>> 5ee0ca2 (Enhance BugController with attachment management features, including endpoints for uploading and retrieving bug attachments. Update Attachment entity and service to support String entityId for improved flexibility. Refactor related methods for backward compatibility.)
         userRefreshTokenRepository.deleteByUserId(currentUser.getId());
     }
 
